@@ -68,7 +68,7 @@ export function Footer({ updatedAt }) {
       <p>
         <a className="xlink" href="https://x.com/NextraAgent" target="_blank" rel="noopener noreferrer">Follow @NextraAgent on X ↗</a>
       </p>
-      <p>Nextra is a utility token powering trading agents and the Vault on Robinhood Chain. Not financial advice.</p>
+      <p>Nextra is a utility token powering trading agents and the Vault on Robinhood Chain.</p>
     </footer>
   );
 }

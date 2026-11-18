@@ -75,7 +75,7 @@ export function SiteFooter() {
           </a>
           <a href="/#faq">FAQ</a>
         </div>
-        <p className="legal">Nextra is a utility token powering trading agents and the Vault on Robinhood Chain. Not financial advice.</p>
+        <p className="legal">Nextra is a utility token powering trading agents and the Vault on Robinhood Chain.</p>
       </div>
     </footer>
   );

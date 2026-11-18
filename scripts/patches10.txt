@@ -32,11 +32,11 @@
 @@@OLD
         <p className="legal">Nextra is a memecoin. The Vault is not a dividend and promises no returns. Not financial advice.</p>
 @@@NEW
-        <p className="legal">Nextra is a utility token powering trading agents and the Vault on Robinhood Chain. Not financial advice.</p>
+        <p className="legal">Nextra is a utility token powering trading agents and the Vault on Robinhood Chain.</p>
 @@@END
 @@@FILE src/app/parts.jsx
 @@@OLD
       <p>Nextra is a memecoin. The Vault is not a dividend and promises no returns. Not financial advice.</p>
 @@@NEW
-      <p>Nextra is a utility token powering trading agents and the Vault on Robinhood Chain. Not financial advice.</p>
+      <p>Nextra is a utility token powering trading agents and the Vault on Robinhood Chain.</p>
 @@@END
