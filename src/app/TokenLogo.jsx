@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 // Company icons via Google's public favicon service (the company's own site icon).
 // Falls back to a two-letter badge if an icon can't load.
 const DOMAINS = {
+  ETH: "ethereum.org",
   NVDA: "nvidia.com",
   TSLA: "tesla.com",
   AAPL: "apple.com",

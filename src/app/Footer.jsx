@@ -11,7 +11,6 @@ export default function Footer() {
               ne<b>x</b>tra
             </span>
           </a>
-          <p>Trading agents and daily stock drops, built on Robinhood Chain.</p>
         </div>
         <div>
           <h4>Product</h4>

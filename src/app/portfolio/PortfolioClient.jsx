@@ -261,7 +261,7 @@ export default function PortfolioClient() {
         <h2>Holdings</h2>
         <ul className="pf-list">
           <li className="card">
-            <span className="pf-tok eth">Ξ</span>
+            <TokenLogo symbol="ETH" size={44} />
             <div className="pf-name">
               <strong>ETH</strong>
               <span>Ether</span>
