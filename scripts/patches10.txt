@@ -1,0 +1,42 @@
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+  ["safety", "Safety & risks"],
+@@@NEW
+  ["safety", "Stay safe"],
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+            <h2>Safety & risks</h2>
+            <Callout tone="warn" title="Please read">
+              $NEXTRA is a memecoin and can lose value. Drops depend on trading fees, so they change every day and can be zero.
+              Nothing here is a promise of returns or financial advice. Only use money you can afford to lose.
+            </Callout>
+            <ul>
+@@@NEW
+            <h2>Stay safe</h2>
+            <ul>
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+              Nextra is a memecoin on Robinhood Chain with two utilities: <b>trading agents</b> that follow rules you set, and a{" "}
+@@@NEW
+              Nextra is a utility token on Robinhood Chain with two core utilities: <b>trading agents</b> that follow rules you set, and a{" "}
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+    a: "A memecoin on Robinhood Chain with two utilities: trading agents that work inside limits you set, and a Vault that drops tokenized stocks to holders every trading day.",
+@@@NEW
+    a: "A utility token on Robinhood Chain with two core utilities: trading agents that work inside limits you set, and a Vault that drops tokenized stocks to holders every trading day.",
+@@@END
+@@@FILE src/app/site.jsx
+@@@OLD
+        <p className="legal">Nextra is a memecoin. The Vault is not a dividend and promises no returns. Not financial advice.</p>
+@@@NEW
+        <p className="legal">Nextra is a utility token powering trading agents and the Vault on Robinhood Chain. Not financial advice.</p>
+@@@END
+@@@FILE src/app/parts.jsx
+@@@OLD
+      <p>Nextra is a memecoin. The Vault is not a dividend and promises no returns. Not financial advice.</p>
+@@@NEW
+      <p>Nextra is a utility token powering trading agents and the Vault on Robinhood Chain. Not financial advice.</p>
+@@@END

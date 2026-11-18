@@ -53,7 +53,7 @@ const ROADMAP = [
 const FAQ = [
   {
     q: "What is Nextra?",
-    a: "A memecoin on Robinhood Chain with two utilities: trading agents that work inside limits you set, and a Vault that drops tokenized stocks to holders every trading day.",
+    a: "A utility token on Robinhood Chain with two core utilities: trading agents that work inside limits you set, and a Vault that drops tokenized stocks to holders every trading day.",
   },
   {
     q: "Do agents hold my funds?",

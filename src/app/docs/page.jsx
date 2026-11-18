@@ -23,7 +23,7 @@ const TOC = [
   ["voting", "Voting"],
   ["schedule", "Schedule"],
   ["transparency", "Transparency"],
-  ["safety", "Safety & risks"],
+  ["safety", "Stay safe"],
   ["glossary", "Glossary"],
 ];
 
@@ -100,7 +100,7 @@ export default function DocsPage() {
             <span className="eyebrow">Docs</span>
             <h1>How Nextra works</h1>
             <p className="dc-lead">
-              Nextra is a memecoin on Robinhood Chain with two utilities: <b>trading agents</b> that follow rules you set, and a{" "}
+              Nextra is a utility token on Robinhood Chain with two core utilities: <b>trading agents</b> that follow rules you set, and a{" "}
               <b>Vault</b> that turns trading fees into tokenized stocks and drops them to holders every trading day.
             </p>
             <div className="dc-cards">
@@ -317,11 +317,7 @@ export default function DocsPage() {
           </section>
 
           <section id="safety">
-            <h2>Safety & risks</h2>
-            <Callout tone="warn" title="Please read">
-              $NEXTRA is a memecoin and can lose value. Drops depend on trading fees, so they change every day and can be zero.
-              Nothing here is a promise of returns or financial advice. Only use money you can afford to lose.
-            </Callout>
+            <h2>Stay safe</h2>
             <ul>
               <li>Only trust links and contract addresses from nextra-agent.xyz and @NextraAgent.</li>
               <li>Nextra will never DM you first or ask for your seed phrase or private key.</li>
