@@ -43,6 +43,13 @@
 .tc-ca button:active { transform: scale(.97); }
 .tc-ca button.done { background: #f4efe4; }
 
+.tc-trade { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 14px; min-height: 56px; border-radius: 14px; border: 1px solid #34342e; color: #f4efe4; text-decoration: none; transition: border-color .15s, background .15s; }
+.tc-trade:hover { border-color: #8ad11a; background: rgba(138,209,26,.06); }
+.tc-trade span { display: flex; flex-direction: column; gap: 2px; }
+.tc-trade b { font: 700 15px Inter, sans-serif; }
+.tc-trade small { font-size: 12px; color: #9a9585; }
+.tc-trade svg { color: #8ad11a; flex: 0 0 auto; }
+
 @media (max-width: 420px) {
   .tc { padding: 16px 16px 14px; border-radius: 22px; }
   .tc-stats b { font-size: 15px; }

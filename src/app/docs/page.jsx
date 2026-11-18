@@ -173,7 +173,7 @@ export default function DocsPage() {
               role="TP/SL Agent"
               what="Buys a token and exits for you at your take-profit or stop-loss."
               settings={[
-                ["Stock token", "The Robinhood stock token to buy (NVDA, TSLA, AAPL and more). Swapped on Uniswap."],
+                ["Token", "$NEXTRA (bought and sold on its Pons bonding curve) or a Robinhood stock token like NVDA, TSLA or AAPL (swapped on Uniswap)."],
                 ["Buy amount", "How much ETH to spend."],
                 ["Take-profit", "Sell everything when the price is up this %."],
                 ["Stop-loss", "Sell everything when the price is down this %."],

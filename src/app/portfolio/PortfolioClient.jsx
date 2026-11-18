@@ -201,7 +201,7 @@ export default function PortfolioClient() {
       <section className="sec pf-head">
         <span className="eyebrow">Portfolio</span>
         <h1 className="ag-title">Your wallet, in one place.</h1>
-        <p className="lead">Log in to see your ETH and stock tokens, send funds, or export your key.</p>
+        <p className="lead">Log in to see your ETH, $NEXTRA and stock tokens, send funds, or export your key.</p>
         <button type="button" className="btn primary" onClick={login}>
           Log in
         </button>
@@ -220,7 +220,7 @@ export default function PortfolioClient() {
             {data ? fmt(data.totalWei, 5) : "…"} <small>ETH</small>
           </strong>
           <span className="pf-sub">
-            ETH + stock tokens, valued at Uniswap prices{loading ? " · updating…" : ""}
+            ETH, $NEXTRA and stock tokens at live prices{loading ? " · updating…" : ""}
           </span>
         </div>
 
@@ -278,9 +278,9 @@ export default function PortfolioClient() {
             <li key={t.symbol} className="card">
               <TokenLogo symbol={t.symbol} size={44} />
               <div className="pf-name">
-                <strong>{t.symbol}</strong>
+                <strong>{t.symbol === "NEXTRA" ? "$NEXTRA" : t.symbol}</strong>
                 <a href={`${EXPLORER}/token/${t.address}`} target="_blank" rel="noopener noreferrer">
-                  Stock token ↗
+                  {t.symbol === "NEXTRA" ? "Nextra token ↗" : "Stock token ↗"}
                 </a>
               </div>
               <div className="pf-amt">

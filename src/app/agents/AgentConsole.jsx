@@ -6,6 +6,8 @@ import { createPublicClient, http, formatEther } from "viem";
 import AgentIcon from "../AgentIcon";
 import TokenLogo from "../TokenLogo";
 import { SENTRY_TOKENS } from "../../lib/stocks";
+
+const SENTRY_OPTIONS = ["NEXTRA", ...SENTRY_TOKENS];
 import { robinhoodChain } from "./Providers";
 
 const rpc = createPublicClient({ chain: robinhoodChain, transport: http() });
@@ -128,7 +130,7 @@ const pos = (v) => Number(v) > 0;
 function describe(id, c) {
   switch (id) {
     case "sentry":
-      return `Buy ${c.amount} ETH of ${c.token}. Sell everything at +${c.tp}% profit or −${c.sl}% loss${
+      return `Buy ${c.amount} ETH of ${c.token === "NEXTRA" ? "$NEXTRA" : c.token}. Sell everything at +${c.tp}% profit or −${c.sl}% loss${
         c.trailing ? ", with a trailing stop that follows the price up" : ""
       }.`;
     case "tempo":
@@ -211,8 +213,8 @@ function TokenSelect({ value, onChange, options = TOKENS, logo = false }) {
 function SentryForm({ c, set }) {
   return (
     <>
-      <Field label="Stock token">
-        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_TOKENS} logo />
+      <Field label="Token" hint={c.token === "NEXTRA" ? "Trades on the Pons curve. Early buys may pay Pons' snipe tax." : undefined}>
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_OPTIONS} logo />
       </Field>
       <Field label="Buy amount" hint="Keep a little extra ETH in your wallet for gas.">
         <Num value={c.amount} onChange={(v) => set("amount", v)} suffix="ETH" />
@@ -367,12 +369,13 @@ function SentryJob({ j, act, busy }) {
       <div className="ag-li-top">
         <strong className="ag-job-title">
           <TokenLogo symbol={j.token} size={30} />
-          Sentry · {j.token}
+          Sentry · {j.token === "NEXTRA" ? "$NEXTRA" : j.token}
         </strong>
         <span className={`chip${live && !j.paused ? " live" : ""}`}>{j.paused ? "Paused" : STATUS[j.status] || j.status}</span>
       </div>
       <p className="sub">
-        {j.amount} ETH of {j.token}. Exit at +{j.tp}% or −{j.sl}%{j.trailing ? " (trailing)" : ""}.
+        {j.amount} ETH of {j.token === "NEXTRA" ? "$NEXTRA" : j.token}
+        {j.venue === "pons" ? " on Pons" : ""}. Exit at +{j.tp}% or −{j.sl}%{j.trailing ? " (trailing)" : ""}.
       </p>
       {j.entryWei ? (
         <div className="ag-job-nums">
@@ -446,6 +449,15 @@ export default function AgentConsole() {
   const [loaded, setLoaded] = useState(false);
   const [flash, setFlash] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // deep link from the homepage token card: /agents?token=NEXTRA
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("token")?.toUpperCase();
+    if (t && SENTRY_OPTIONS.includes(t)) {
+      setActive("sentry");
+      setConfigs((c) => ({ ...c, sentry: { ...c.sentry, token: t } }));
+    }
+  }, []);
 
   useEffect(() => {
     setLoaded(false);

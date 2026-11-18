@@ -4,6 +4,8 @@ import { parseEther } from "viem";
 import { embeddedWallet, getPrivyUser, verifyAccessToken } from "../../../lib/privyServer";
 import { ACTIVE, deleteJob, getJob, listJobs, saveJob } from "../../../lib/sentry";
 import { stockAddress } from "../../../lib/stocks";
+import { curveFor } from "../../../lib/pons";
+import { NEXTRA } from "../../../lib/nextra";
 
 export const dynamic = "force-dynamic";
 
@@ -37,11 +39,12 @@ export async function POST(req) {
   const b = await req.json().catch(() => ({}));
   if (b.agent !== "sentry") return err("Only Sentry is live right now.");
   const token = String(b.token || "").toUpperCase();
-  const tokenAddress = stockAddress(token);
+  const tokenAddress = token === "NEXTRA" ? NEXTRA : stockAddress(token);
+  const curve = token === "NEXTRA" ? curveFor(NEXTRA) : null;
   const amount = Number(b.amount);
   const tp = Number(b.tp);
   const sl = Number(b.sl);
-  if (!tokenAddress) return err("Pick a supported stock token.");
+  if (!tokenAddress) return err("Pick a supported token.");
   if (!(amount > 0) || amount > 100) return err("Buy amount must be between 0 and 100 ETH.");
   if (!(tp >= 0.5 && tp <= 1000)) return err("Take-profit must be between 0.5% and 1000%.");
   if (!(sl >= 0.5 && sl < 100)) return err("Stop-loss must be between 0.5% and 99%.");
@@ -63,6 +66,8 @@ export async function POST(req) {
     address: w.address,
     token,
     tokenAddress,
+    curve,
+    venue: curve ? "pons" : "uniswap",
     amount: String(amount),
     amountWei: parseEther(String(amount)).toString(),
     tp,

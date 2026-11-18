@@ -95,13 +95,13 @@ export function sellCall({ route, amountIn, recipient, slippageBps }) {
   return { to: ROUTER, value: 0n, data: encodeFunctionData({ abi: routerAbi, functionName: "multicall", args: [deadline(), [swap, unwrap]] }) };
 }
 
-export function approveCall(token, amount) {
-  return { to: token, value: 0n, data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [ROUTER, amount] }) };
+export function approveCall(token, amount, spender = ROUTER) {
+  return { to: token, value: 0n, data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amount] }) };
 }
 
 export const tokenBalance = (token, owner) => publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
-export const tokenAllowance = (token, owner) =>
-  publicClient.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [owner, ROUTER] });
+export const tokenAllowance = (token, owner, spender = ROUTER) =>
+  publicClient.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [owner, spender] });
 
 const hex = (n) => "0x" + BigInt(n).toString(16);
 

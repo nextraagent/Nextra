@@ -43,7 +43,7 @@ const AGENTS = [
 
 const ROADMAP = [
   { status: "Live", title: "Vault dashboard", text: "Public page that reads the Vault straight from Robinhood Chain." },
-  { status: "Live", title: "Sentry", text: "TP/SL agent: buys on Uniswap and exits for you, from your own wallet." },
+  { status: "Live", title: "Sentry", text: "TP/SL agent for $NEXTRA (Pons curve) and stock tokens (Uniswap). Exits for you, from your own wallet." },
   { status: "Building", title: "Perch", text: "Limit orders on the same price-watching engine." },
   { status: "Planned", title: "Tempo", text: "Scheduled DCA buys and TWAP sells." },
   { status: "Planned", title: "Echo", text: "Mirror trades from wallets you choose." },
