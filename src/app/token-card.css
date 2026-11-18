@@ -68,3 +68,25 @@
   .tc-trade b { font-size: 14px; }
   .tc-trade small { display: none; }
 }
+
+/* cream theme: the card blends into the page */
+.tc { background: #fbf8f1; color: #161613; border: 1px solid #e2daca; box-shadow: 0 24px 50px -38px rgba(22,22,19,.35); }
+.tc-id span, .tc-stats span, .tc-ca span, .tc-tf button, .tc-trade small { color: #8a8576; }
+.tc-live { background: #5DA000; }
+.tc-chg.up { background: #dcefc0; color: #3d6a00; }
+.tc-chg.down { background: rgba(229,72,77,.12); color: #c0362c; }
+.tc-stats { border-color: #e2daca; background: #f4efe4; }
+.tc-stats div + div { border-left-color: #e2daca; }
+.tc-stats sub { color: #5DA000; }
+.tc-tf button.on { background: #161613; color: #f4efe4; }
+.tc-burn { color: #c25a12; }
+.tc-burn::before { color: #e2731f; }
+.tc-chart-msg { color: #8a8576; }
+.tc-perf::before { border-top-color: #e2daca; }
+.tc-perf::after { display: none; }
+.tc-ca code { color: #161613; }
+.tc-ca button { background: #161613; color: #f4efe4; }
+.tc-ca button.done { background: #5DA000; color: #fff; }
+.tc-trade { border-color: #e2daca; color: #161613; background: #f4efe4; }
+.tc-trade:hover { border-color: #5DA000; background: #eef6e2; }
+.tc-trade svg { color: #5DA000; }

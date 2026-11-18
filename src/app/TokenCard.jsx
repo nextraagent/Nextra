@@ -40,18 +40,18 @@ function Chart({ tf }) {
       if (!alive || !box.current) return;
       chart = lc.createChart(box.current, {
         autoSize: true,
-        layout: { background: { type: "solid", color: "transparent" }, textColor: "#9a9585", fontFamily: "JetBrains Mono, ui-monospace, monospace", fontSize: 10, attributionLogo: false },
-        grid: { vertLines: { color: "rgba(244,239,228,.05)" }, horzLines: { color: "rgba(244,239,228,.06)" } },
+        layout: { background: { type: "solid", color: "transparent" }, textColor: "#8a8576", fontFamily: "JetBrains Mono, ui-monospace, monospace", fontSize: 10, attributionLogo: false },
+        grid: { vertLines: { color: "rgba(22,22,19,.04)" }, horzLines: { color: "rgba(22,22,19,.06)" } },
         rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.12, bottom: 0.08 } },
         timeScale: { borderVisible: false, timeVisible: tf !== "1d", secondsVisible: false, rightOffset: 3 },
-        crosshair: { vertLine: { color: "rgba(138,209,26,.35)", labelBackgroundColor: "#2c2c27" }, horzLine: { color: "rgba(138,209,26,.35)", labelBackgroundColor: "#2c2c27" } },
+        crosshair: { vertLine: { color: "rgba(93,160,0,.4)", labelBackgroundColor: "#161613" }, horzLine: { color: "rgba(93,160,0,.4)", labelBackgroundColor: "#161613" } },
         handleScale: { axisPressedMouseMove: false },
       });
       series = chart.addSeries(lc.CandlestickSeries, {
-        upColor: "#8ad11a",
+        upColor: "#5DA000",
         downColor: "#e5484d",
         borderVisible: false,
-        wickUpColor: "#8ad11a",
+        wickUpColor: "#5DA000",
         wickDownColor: "#e5484d",
         priceFormat: { type: "custom", minMove: 1e-12, formatter: tinyFmt },
       });
@@ -125,8 +125,8 @@ export default function TokenCard() {
       <div className="tc-top">
         <div className="tc-id">
           <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
-            <rect x="7" y="7" width="31" height="31" rx="9" fill="none" stroke="#f4efe4" strokeWidth="7" />
-            <rect x="26" y="26" width="31" height="31" rx="9" fill="none" stroke="#8ad11a" strokeWidth="7" />
+            <rect x="7" y="7" width="31" height="31" rx="9" fill="none" stroke="#161613" strokeWidth="7" />
+            <rect x="26" y="26" width="31" height="31" rx="9" fill="none" stroke="#5DA000" strokeWidth="7" />
           </svg>
           <div>
             <strong>$NEXTRA</strong>
