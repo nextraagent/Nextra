@@ -28,6 +28,13 @@ export default function Footer() {
           </a>
         </div>
       </div>
+      <p className="nx-credit">
+        Charts by{" "}
+        <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">
+          TradingView
+        </a>{" "}
+        Lightweight Charts™
+      </p>
     </footer>
   );
 }

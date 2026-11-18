@@ -3,6 +3,7 @@ import Nav from "./Nav";
 import AgentIcon from "./AgentIcon";
 import Footer from "./Footer";
 import Logo3D from "./Logo3D";
+import TokenCard from "./TokenCard";
 import "./home-new.css";
 
 const AGENTS = [
@@ -141,6 +142,7 @@ function Hero() {
       </div>
       <div className="nx-hero-art">
         <Logo3D />
+        <TokenCard />
       </div>
     </section>
   );

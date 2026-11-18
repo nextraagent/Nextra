@@ -1,0 +1,50 @@
+/* $NEXTRA token card — a dark "ticket" with a perforated stub */
+.tc { position: relative; width: 100%; max-width: 460px; background: #161613; color: #f4efe4; border-radius: 26px; padding: 20px 20px 18px; box-shadow: 0 30px 60px -32px rgba(22,22,19,.55); }
+.tc-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.tc-id { display: flex; align-items: center; gap: 12px; }
+.tc-id div { display: flex; flex-direction: column; gap: 2px; }
+.tc-id strong { font-family: "Space Grotesk", Inter, sans-serif; font-size: 22px; letter-spacing: -.02em; }
+.tc-id span { display: inline-flex; align-items: center; gap: 7px; font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #9a9585; }
+.tc-live { width: 7px; height: 7px; border-radius: 50%; background: #8ad11a; box-shadow: 0 0 0 0 rgba(138,209,26,.6); animation: tcPulse 2s infinite; }
+@keyframes tcPulse { 0% { box-shadow: 0 0 0 0 rgba(138,209,26,.55); } 70% { box-shadow: 0 0 0 7px rgba(138,209,26,0); } 100% { box-shadow: 0 0 0 0 rgba(138,209,26,0); } }
+.tc-chg { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700; padding: 6px 10px; border-radius: 999px; }
+.tc-chg.up { background: rgba(138,209,26,.14); color: #8ad11a; }
+.tc-chg.down { background: rgba(229,72,77,.14); color: #ff6b70; }
+
+.tc-stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 16px 0 12px; border: 1px solid #2c2c27; border-radius: 16px; overflow: hidden; }
+.tc-stats div { display: flex; flex-direction: column; gap: 4px; padding: 12px; min-width: 0; }
+.tc-stats div + div { border-left: 1px solid #2c2c27; }
+.tc-stats span { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #9a9585; }
+.tc-stats b { font-family: "JetBrains Mono", monospace; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc-stats sub { font-size: .62em; vertical-align: -0.25em; margin: 0 1px; color: #8ad11a; }
+
+.tc-tf { display: flex; align-items: center; gap: 4px; }
+.tc-tf button { border: 0; background: transparent; color: #9a9585; font: 700 12px "JetBrains Mono", monospace; padding: 7px 10px; border-radius: 9px; cursor: pointer; min-height: 32px; }
+.tc-tf button.on { background: #2c2c27; color: #f4efe4; }
+.tc-burn { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 11px; color: #ffb27a; }
+.tc-burn::before { content: "▲ "; content: "◆ "; color: #ff8a3d; }
+
+.tc-chart { position: relative; height: 200px; margin-top: 6px; }
+.tc-chart-box { position: absolute; inset: 0; }
+.tc-chart-msg { position: absolute; inset: 0; display: grid; place-items: center; font-family: "JetBrains Mono", monospace; font-size: 12px; color: #6f6b60; pointer-events: none; }
+
+/* perforation with side notches */
+.tc-perf { position: relative; height: 26px; margin: 8px -20px 4px; }
+.tc-perf::before { content: ""; position: absolute; left: 22px; right: 22px; top: 50%; border-top: 2px dashed #34342e; }
+.tc-perf::after { content: ""; position: absolute; inset: 0; background:
+  radial-gradient(circle at 0 50%, #f4efe4 12px, transparent 12.5px),
+  radial-gradient(circle at 100% 50%, #f4efe4 12px, transparent 12.5px); }
+
+.tc-ca { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tc-ca div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tc-ca span { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #9a9585; }
+.tc-ca code { background: none; padding: 0; color: #f4efe4; font-family: "JetBrains Mono", monospace; font-size: 14px; }
+.tc-ca button { flex: 0 0 auto; border: 0; border-radius: 12px; background: #8ad11a; color: #161613; font: 700 14px Inter, sans-serif; padding: 0 16px; min-height: 44px; cursor: pointer; transition: transform .1s; }
+.tc-ca button:active { transform: scale(.97); }
+.tc-ca button.done { background: #f4efe4; }
+
+@media (max-width: 420px) {
+  .tc { padding: 16px 16px 14px; border-radius: 22px; }
+  .tc-stats b { font-size: 15px; }
+  .tc-perf { margin: 8px -16px 4px; }
+}

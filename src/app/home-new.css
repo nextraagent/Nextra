@@ -4,7 +4,7 @@
 .nx-hero h1 em { font-style: normal; color: inherit; background: linear-gradient(to top, rgba(93,160,0,.5) 0, rgba(93,160,0,.5) .6em, transparent .6em); border-radius: 4px; padding: 0 .06em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .nx-trust { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 24px; color: #5f5b51; font-size: 14px; }
 .nx-trust span { display: inline-flex; align-items: center; gap: 7px; }
-.nx-hero-art { display: flex; justify-content: center; }
+.nx-hero-art { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 @media (max-width: 860px) {
   .nx-hero { grid-template-columns: 1fr; padding-top: 36px; gap: 8px; }
 }
