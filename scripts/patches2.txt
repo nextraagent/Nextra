@@ -1,0 +1,465 @@
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+    defaults: { mode: "DCA", token: "TSLA", perOrder: "0.01", every: "5", unit: "min", budget: "0.2" },
+@@@NEW
+    defaults: { mode: "DCA", token: "NEXTRA", perOrder: "0.01", every: "5", budget: "0.1" },
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      return `${c.mode === "DCA" ? "Buy" : "Sell"} ${c.perOrder} ETH of ${c.token} every ${c.every} ${
+        c.unit === "sec" ? "seconds" : "minutes"
+@@@NEW
+      return `${c.mode === "DCA" ? "Buy" : "Sell"} ${c.perOrder} ETH of ${c.token === "NEXTRA" ? "$NEXTRA" : c.token} every ${c.every} minute${
+        Number(c.every) === 1 ? "" : "s"
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+    const okEvery = c.unit === "sec" ? e >= 10 && e <= 60 : e >= 1 && e <= 10;
+@@@NEW
+    const okEvery = Number.isInteger(e) && e >= 1 && e <= 60;
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+        <Seg options={[{ v: "DCA", l: "DCA · buy slowly" }, { v: "TWAP", l: "TWAP · sell in steps" }]} value={c.mode} onChange={(v) => set("mode", v)} />
+      </Field>
+      <Field label="Token">
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} />
+      </Field>
+      <div className="ag-two">
+@@@NEW
+        <Seg options={[{ v: "DCA", l: "DCA · buy slowly" }, { v: "TWAP", l: "TWAP · sell in steps" }]} value={c.mode} onChange={(v) => set("mode", v)} />
+      </Field>
+      <Field label="Token" hint={c.token === "NEXTRA" ? "Trades on the Pons curve." : undefined}>
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_OPTIONS} logo />
+      </Field>
+      <div className="ag-two">
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+        <Field label="Amount per order">
+@@@NEW
+        <Field label={c.mode === "DCA" ? "ETH per buy" : "ETH per sell"}>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      <Field label="Every" hint={c.unit === "sec" ? "10–60 seconds" : "1–10 minutes"}>
+        <div className="ag-row">
+          <Num value={c.every} onChange={(v) => set("every", v)} step="1" />
+          <Seg options={[{ v: "sec", l: "sec" }, { v: "min", l: "min" }]} value={c.unit} onChange={(v) => set("unit", v)} />
+        </div>
+@@@NEW
+      <Field label="Every" hint={c.mode === "TWAP" ? "1–60 minutes. Each step sells tokens worth this much ETH." : "1–60 minutes"}>
+        <Num value={c.every} onChange={(v) => set("every", v)} step="1" suffix="min" />
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+}
+
+export default function AgentConsole() {
+@@@NEW
+}
+
+const fmtTime = (ms) => {
+  const s = Math.max(0, Math.round((ms - Date.now()) / 1000));
+  return s < 60 ? `${s}s` : `${Math.round(s / 60)}m`;
+};
+
+function TempoJob({ j, act, busy }) {
+  const live = j.status === "running";
+  const label = j.token === "NEXTRA" ? "$NEXTRA" : j.token;
+  const done = Number(BigInt(j.filledWei || "0")) / Number(BigInt(j.budgetWei || "1"));
+  return (
+    <li className="card ag-job">
+      <div className="ag-li-top">
+        <strong className="ag-job-title">
+          <TokenLogo symbol={j.token} size={30} />
+          Tempo · {j.mode} {label}
+        </strong>
+        <span className={`chip${live && !j.paused ? " live" : ""}`}>
+          {j.paused ? "Paused" : live ? "Running" : j.status === "done" ? "Done" : j.status === "cancelled" ? "Stopped" : "Failed"}
+        </span>
+      </div>
+      <p className="sub">
+        {j.mode === "DCA" ? "Buy" : "Sell"} {j.perOrder} ETH of {label}
+        {j.venue === "pons" ? " on Pons" : ""} every {j.every} min, up to {j.budget} ETH.
+      </p>
+      <div className="ag-job-nums">
+        <div>
+          <span>{j.mode === "DCA" ? "Spent" : "Sold"}</span>
+          <b>{fmtEth(j.filledWei)} ETH</b>
+        </div>
+        <div>
+          <span>Orders</span>
+          <b>{j.orders || 0}</b>
+        </div>
+        <div>
+          <span>{live ? "Next" : "Progress"}</span>
+          <b>{live && !j.paused && j.nextAt ? (j.pending ? "filling" : fmtTime(j.nextAt)) : `${Math.min(100, Math.round(done * 100))}%`}</b>
+        </div>
+      </div>
+      <div className="ag-prog" aria-hidden="true">
+        <i style={{ width: `${Math.min(100, done * 100)}%` }} />
+      </div>
+      {j.note || j.error ? <p className="ag-job-note">{j.note || j.error}</p> : null}
+      <div className="ag-job-links">
+        {j.lastTx ? (
+          <a href={`${EXPLORER}/tx/${j.lastTx}`} target="_blank" rel="noopener noreferrer">
+            Last order ↗
+          </a>
+        ) : null}
+        {j.pending?.hash ? (
+          <a href={`${EXPLORER}/tx/${j.pending.hash}`} target="_blank" rel="noopener noreferrer">
+            Pending tx ↗
+          </a>
+        ) : null}
+      </div>
+      <div className="ag-li-act">
+        {live ? (
+          <>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, j.paused ? "resume" : "pause")}>
+              {j.paused ? "Resume" : "Pause"}
+            </button>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "close")}>
+              Stop
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "delete")}>
+            Remove
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+const LIVE = ["sentry", "tempo"];
+
+export default function AgentConsole() {
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+  const isSentry = active === "sentry";
+@@@NEW
+  const isSentry = active === "sentry";
+  const isLive = LIVE.includes(active);
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+  const startSentry = async () => {
+@@@NEW
+  const startLive = async () => {
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      if (!SIGNER_ID) throw new Error("Sentry is being switched on. Please try again in a bit.");
+      if (!embedded) throw new Error("Sentry runs on your Nextra wallet. Log in with email, Google or X to get one.");
+@@@NEW
+      if (!SIGNER_ID) throw new Error(`${agent.name} is being switched on. Please try again in a bit.`);
+      if (!embedded) throw new Error(`${agent.name} runs on your Nextra wallet. Log in with email, Google or X to get one.`);
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      await api("POST", { agent: "sentry", ...c });
+      say("Sentry is live. It buys within about a minute, then watches your exit.", 7000);
+@@@NEW
+      await api("POST", { agent: active, ...c });
+      say(
+        isSentry
+          ? "Sentry is live. It buys within about a minute, then watches your exit."
+          : `Tempo is live. First ${c.mode === "DCA" ? "buy" : "sell"} within about a minute.`,
+        7000,
+      );
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      say(e?.message || "Could not start Sentry.", 7000);
+@@@NEW
+      say(e?.message || `Could not start ${agent.name}.`, 7000);
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+    if (isSentry) return startSentry();
+@@@NEW
+    if (isLive) return startLive();
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+          <span className="chip">Sentry live</span>
+          <span>Sentry trades for real from your wallet. Tempo, Perch and Echo are in preview — set them up now, they start later.</span>
+@@@NEW
+          <span className="chip">Sentry + Tempo live</span>
+          <span>Sentry and Tempo trade for real from your wallet, including $NEXTRA. Perch and Echo are in preview — set them up now, they start later.</span>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+              {a.id === "sentry" ? <i className="ag-live-dot" aria-label="live" /> : null}
+@@@NEW
+              {LIVE.includes(a.id) ? <i className="ag-live-dot" aria-label="live" /> : null}
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+            {isSentry ? <li>Swaps on Uniswap, checks the price every minute</li> : null}
+@@@NEW
+            {isLive ? <li>{c.token === "NEXTRA" ? "Trades $NEXTRA on its Pons curve" : "Swaps on Uniswap"}, checks every minute</li> : null}
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+            {!authenticated ? `Log in to ${isSentry ? "start" : "save"} ${agent.name}` : busy ? "Working…" : isSentry ? "Start Sentry" : `Save ${agent.name}`}
+@@@NEW
+            {!authenticated ? `Log in to ${isLive ? "start" : "save"} ${agent.name}` : busy ? "Working…" : isLive ? `Start ${agent.name}` : `Save ${agent.name}`}
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+          {isSentry && authenticated && !delegated ? (
+            <span className="ag-hint light">First time: approve once so Sentry can trade while you're away. You can revoke it any time.</span>
+@@@NEW
+          {isLive && authenticated && !delegated ? (
+            <span className="ag-hint light">First time: approve once so {agent.name} can trade while you're away. You can revoke it any time.</span>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+          <p className="sub">Nothing yet. Start Sentry above and it will show here.</p>
+@@@NEW
+          <p className="sub">Nothing yet. Start Sentry or Tempo above and it will show here.</p>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+            {jobs.map((j) => (
+              <SentryJob key={j.id} j={j} act={act} busy={busy} />
+            ))}
+@@@NEW
+            {jobs.map((j) =>
+              j.agent === "tempo" ? <TempoJob key={j.id} j={j} act={act} busy={busy} /> : <SentryJob key={j.id} j={j} act={act} busy={busy} />,
+            )}
+@@@END
+@@@FILE src/app/agents/agents.css
+@@@OLD
+.ag-job-title { display: flex; align-items: center; gap: 10px; }
+@@@NEW
+.ag-job-title { display: flex; align-items: center; gap: 10px; }
+.ag-prog { height: 6px; border-radius: 999px; background: #eae3d3; overflow: hidden; }
+.ag-prog i { display: block; height: 100%; background: #5da000; border-radius: 999px; transition: width .4s ease; }
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+import { ACTIVE, deleteJob, getJob, listJobs, saveJob } from "../../../lib/sentry";
+@@@NEW
+import { ACTIVE, deleteJob, getJob, listJobs, saveJob } from "../../../lib/sentry";
+import { TEMPO_ACTIVE, deleteTempo, getTempo, listTempo, saveTempo } from "../../../lib/tempo";
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+const publicJob = ({ userId, walletId, balBefore, ...j }) => j;
+@@@NEW
+const publicJob = ({ userId, walletId, balBefore, ...j }) => {
+  if (j.pending) j.pending = { kind: j.pending.kind, hash: j.pending.hash };
+  return j;
+};
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const jobs = (await listJobs()).filter((j) => j.userId === did).map(publicJob);
+@@@NEW
+  const [s, t] = await Promise.all([listJobs(), listTempo()]);
+  const jobs = [...s.map((j) => ({ agent: "sentry", ...j })), ...t]
+    .filter((j) => j.userId === did)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .map(publicJob);
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  return NextResponse.json({ jobs });
+@@@NEW
+  return NextResponse.json({ jobs });
+}
+
+function pickToken(raw) {
+  const token = String(raw || "").toUpperCase();
+  const tokenAddress = token === "NEXTRA" ? NEXTRA : stockAddress(token);
+  const curve = token === "NEXTRA" ? curveFor(NEXTRA) : null;
+  return { token, tokenAddress, curve, venue: curve ? "pons" : "uniswap" };
+}
+
+async function wallet(did) {
+  const user = await getPrivyUser(did).catch(() => null);
+  const w = embeddedWallet(user);
+  if (!w) return { error: "Agents run on your Nextra wallet. Log in with email, Google or X to get one." };
+  if (!w.delegated) return { error: "Give the agent permission first (the approval popup), then try again." };
+  if (!w.id) return { error: "Your wallet is missing an ID at Privy. Log out and in again, then retry." };
+  return { w };
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  if (b.agent !== "sentry") return err("Only Sentry is live right now.");
+  const token = String(b.token || "").toUpperCase();
+  const tokenAddress = token === "NEXTRA" ? NEXTRA : stockAddress(token);
+  const curve = token === "NEXTRA" ? curveFor(NEXTRA) : null;
+@@@NEW
+  if (b.agent !== "sentry" && b.agent !== "tempo") return err("Only Sentry and Tempo are live right now.");
+  const t = pickToken(b.token);
+  if (!t.tokenAddress) return err("Pick a supported token.");
+  const now = new Date().toISOString();
+
+  if (b.agent === "tempo") {
+    const mode = b.mode === "TWAP" ? "TWAP" : "DCA";
+    const perOrder = Number(b.perOrder);
+    const budget = Number(b.budget);
+    const every = Number(b.every);
+    if (!(perOrder > 0) || perOrder > 50) return err("Amount per order must be between 0 and 50 ETH.");
+    if (!(budget >= perOrder) || budget > 500) return err("Total budget must be at least one order and at most 500 ETH.");
+    if (!(Number.isInteger(every) && every >= 1 && every <= 60)) return err("Interval must be 1–60 minutes.");
+    const { w, error } = await wallet(did);
+    if (error) return err(error);
+    const mine = (await listTempo()).filter((j) => j.userId === did && TEMPO_ACTIVE.includes(j.status));
+    if (mine.length >= 10) return err("You can run up to 10 Tempo agents at once.");
+    const job = await saveTempo({
+      id: randomUUID(),
+      agent: "tempo",
+      userId: did,
+      walletId: w.id,
+      address: w.address,
+      ...t,
+      mode,
+      perOrder: String(perOrder),
+      budget: String(budget),
+      every,
+      perOrderWei: parseEther(String(perOrder)).toString(),
+      budgetWei: parseEther(String(budget)).toString(),
+      everyMs: every * 60_000,
+      filledWei: "0",
+      tokensWei: "0",
+      orders: 0,
+      status: "running",
+      paused: false,
+      nextAt: Date.now(),
+      createdAt: now,
+      log: [{ at: now, msg: `Created. First ${mode === "DCA" ? "buy" : "sell"} within a minute.` }],
+    });
+    return NextResponse.json({ job: publicJob(job) });
+  }
+
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  if (!tokenAddress) return err("Pick a supported token.");
+@@@NEW
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+
+  const user = await getPrivyUser(did).catch(() => null);
+  const w = embeddedWallet(user);
+  if (!w) return err("Sentry runs on your Nextra wallet. Log in with email, Google or X to get one.");
+  if (!w.delegated) return err("Give Sentry permission first (the approval popup), then try again.");
+  if (!w.id) return err("Your wallet is missing an ID at Privy. Log out and in again, then retry.");
+@@@NEW
+  const { w, error } = await wallet(did);
+  if (error) return err(error);
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    token,
+    tokenAddress,
+    curve,
+    venue: curve ? "pons" : "uniswap",
+@@@NEW
+    ...t,
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    createdAt: new Date().toISOString(),
+    log: [{ at: new Date().toISOString(), msg: "Created. Buying within a minute." }],
+@@@NEW
+    createdAt: now,
+    log: [{ at: now, msg: "Created. Buying within a minute." }],
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const job = id ? await getJob(id) : null;
+@@@NEW
+  if (!id) return err("Agent not found.", 404);
+  let job = await getJob(id);
+  const isTempo = !job;
+  if (isTempo) job = await getTempo(id);
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  if (!job || job.userId !== did) return err("Agent not found.", 404);
+@@@NEW
+  if (!job || job.userId !== did) return err("Agent not found.", 404);
+
+  if (isTempo) {
+    if (action === "pause") job.paused = true;
+    else if (action === "resume") job.paused = false;
+    else if (action === "close") {
+      if (job.status !== "running") return err("This agent already stopped.");
+      job.status = "cancelled";
+      job.nextAt = null;
+      job.note = job.pending ? "Stopped. The last order already sent may still fill." : "Stopped.";
+      job.pending = null;
+    } else if (action === "delete") {
+      if (TEMPO_ACTIVE.includes(job.status)) return err("Stop the agent before deleting.");
+      await deleteTempo(job.id);
+      return NextResponse.json({ ok: true });
+    } else return err("Unknown action.");
+    await saveTempo(job);
+    return NextResponse.json({ job: publicJob(job) });
+  }
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+import { tick } from "../../../../lib/sentry";
+@@@NEW
+import { tick } from "../../../../lib/sentry";
+import { tickTempo } from "../../../../lib/tempo";
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+// Called every minute by an external scheduler (cron-job.org): GET /api/sentry/tick
+@@@NEW
+// Called every minute by an external scheduler (cron-job.org): GET /api/sentry/tick
+// Advances Sentry (TP/SL) and Tempo (DCA/TWAP) agents.
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+    return NextResponse.json(await tick());
+@@@NEW
+    const started = Date.now();
+    const sentry = await tick();
+    const tempo = await tickTempo(started + 52_000).catch((e) => ({ error: String(e?.message || e).slice(0, 200) }));
+    return NextResponse.json({ ...sentry, tempo });
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+              Sentry is live and trades from your own wallet. Tempo, Perch and Echo can be set up today and start later; voting and drops switch on at launch.
+@@@NEW
+              Sentry and Tempo are live and trade from your own wallet. Perch and Echo can be set up today and start later; voting and drops switch on at launch.
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+                ["Amount per order", "ETH per buy or sell."],
+                ["Every", "10–60 seconds or 1–10 minutes."],
+@@@NEW
+                ["Token", "$NEXTRA (on its Pons curve) or a stock token (on Uniswap)."],
+                ["Amount per order", "ETH per buy, or the ETH value of tokens per sell."],
+                ["Every", "1–60 minutes."],
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+              example="Buy 0.01 ETH of TSLA every 5 minutes until 0.2 ETH is spent."
+@@@NEW
+              example="Buy 0.01 ETH of $NEXTRA every 5 minutes until 0.1 ETH is spent."
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+    opts: ["Every 10–60 seconds or 1–10 minutes", "Amount per order and total budget", "One direction per task"],
+@@@NEW
+    opts: ["Every 1–60 minutes", "$NEXTRA or stock tokens", "Amount per order and total budget"],
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+  { status: "Planned", title: "Tempo", text: "Scheduled DCA buys and TWAP sells." },
+@@@NEW
+  { status: "Live", title: "Tempo", text: "Scheduled DCA buys and TWAP sells for $NEXTRA and stock tokens." },
+@@@END

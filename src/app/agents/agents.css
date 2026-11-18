@@ -106,3 +106,5 @@
 .tk-fallback { background: #161613; color: #8ad11a; font-family: "JetBrains Mono", monospace; font-weight: 700; box-shadow: none; }
 .ag-input .tk-logo { margin-right: 10px; }
 .ag-job-title { display: flex; align-items: center; gap: 10px; }
+.ag-prog { height: 6px; border-radius: 999px; background: #eae3d3; overflow: hidden; }
+.ag-prog i { display: block; height: 100%; background: #5da000; border-radius: 999px; transition: width .4s ease; }

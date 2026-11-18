@@ -21,7 +21,7 @@ const AGENTS = [
     name: "Tempo",
     role: "Interval Agent",
     text: "Buy in slowly (DCA) or sell a position in steps (TWAP) on a fixed schedule.",
-    opts: ["Every 10–60 seconds or 1–10 minutes", "Amount per order and total budget", "One direction per task"],
+    opts: ["Every 1–60 minutes", "$NEXTRA or stock tokens", "Amount per order and total budget"],
   },
   {
     n: "03",
@@ -45,7 +45,7 @@ const ROADMAP = [
   { status: "Live", title: "Vault dashboard", text: "Public page that reads the Vault straight from Robinhood Chain." },
   { status: "Live", title: "Sentry", text: "TP/SL agent for $NEXTRA (Pons curve) and stock tokens (Uniswap). Exits for you, from your own wallet." },
   { status: "Building", title: "Perch", text: "Limit orders on the same price-watching engine." },
-  { status: "Planned", title: "Tempo", text: "Scheduled DCA buys and TWAP sells." },
+  { status: "Live", title: "Tempo", text: "Scheduled DCA buys and TWAP sells for $NEXTRA and stock tokens." },
   { status: "Planned", title: "Echo", text: "Mirror trades from wallets you choose." },
 ];
 

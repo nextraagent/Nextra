@@ -100,7 +100,7 @@ const AGENTS = [
     icon: "clock",
     tagline: "Steady buys, steady sells.",
     text: "Buy in slowly (DCA) or sell a position in steps (TWAP) on a fixed schedule.",
-    defaults: { mode: "DCA", token: "TSLA", perOrder: "0.01", every: "5", unit: "min", budget: "0.2" },
+    defaults: { mode: "DCA", token: "NEXTRA", perOrder: "0.01", every: "5", budget: "0.1" },
   },
   {
     id: "perch",
@@ -134,8 +134,8 @@ function describe(id, c) {
         c.trailing ? ", with a trailing stop that follows the price up" : ""
       }.`;
     case "tempo":
-      return `${c.mode === "DCA" ? "Buy" : "Sell"} ${c.perOrder} ETH of ${c.token} every ${c.every} ${
-        c.unit === "sec" ? "seconds" : "minutes"
+      return `${c.mode === "DCA" ? "Buy" : "Sell"} ${c.perOrder} ETH of ${c.token === "NEXTRA" ? "$NEXTRA" : c.token} every ${c.every} minute${
+        Number(c.every) === 1 ? "" : "s"
       } until ${c.budget} ETH in total is ${c.mode === "DCA" ? "spent" : "sold"}.`;
     case "perch":
       return `${c.side} ${c.token} with ${c.budget} ETH when the price is ${c.offset}% ${
@@ -156,7 +156,7 @@ function validate(id, c) {
   if (id === "sentry") return pos(c.amount) && Number(c.tp) >= 0.5 && Number(c.sl) >= 0.5 && Number(c.sl) < 100;
   if (id === "tempo") {
     const e = Number(c.every);
-    const okEvery = c.unit === "sec" ? e >= 10 && e <= 60 : e >= 1 && e <= 10;
+    const okEvery = Number.isInteger(e) && e >= 1 && e <= 60;
     return okEvery && pos(c.perOrder) && pos(c.budget) && Number(c.budget) >= Number(c.perOrder);
   }
   if (id === "perch") return pos(c.offset) && Number(c.offset) < 100 && pos(c.budget) && pos(c.slippage);
@@ -241,22 +241,19 @@ function TempoForm({ c, set }) {
       <Field label="Mode">
         <Seg options={[{ v: "DCA", l: "DCA · buy slowly" }, { v: "TWAP", l: "TWAP · sell in steps" }]} value={c.mode} onChange={(v) => set("mode", v)} />
       </Field>
-      <Field label="Token">
-        <TokenSelect value={c.token} onChange={(v) => set("token", v)} />
+      <Field label="Token" hint={c.token === "NEXTRA" ? "Trades on the Pons curve." : undefined}>
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_OPTIONS} logo />
       </Field>
       <div className="ag-two">
-        <Field label="Amount per order">
+        <Field label={c.mode === "DCA" ? "ETH per buy" : "ETH per sell"}>
           <Num value={c.perOrder} onChange={(v) => set("perOrder", v)} suffix="ETH" />
         </Field>
         <Field label="Total budget">
           <Num value={c.budget} onChange={(v) => set("budget", v)} suffix="ETH" />
         </Field>
       </div>
-      <Field label="Every" hint={c.unit === "sec" ? "10–60 seconds" : "1–10 minutes"}>
-        <div className="ag-row">
-          <Num value={c.every} onChange={(v) => set("every", v)} step="1" />
-          <Seg options={[{ v: "sec", l: "sec" }, { v: "min", l: "min" }]} value={c.unit} onChange={(v) => set("unit", v)} />
-        </div>
+      <Field label="Every" hint={c.mode === "TWAP" ? "1–60 minutes. Each step sells tokens worth this much ETH." : "1–60 minutes"}>
+        <Num value={c.every} onChange={(v) => set("every", v)} step="1" suffix="min" />
       </Field>
     </>
   );
@@ -433,6 +430,82 @@ function SentryJob({ j, act, busy }) {
   );
 }
 
+const fmtTime = (ms) => {
+  const s = Math.max(0, Math.round((ms - Date.now()) / 1000));
+  return s < 60 ? `${s}s` : `${Math.round(s / 60)}m`;
+};
+
+function TempoJob({ j, act, busy }) {
+  const live = j.status === "running";
+  const label = j.token === "NEXTRA" ? "$NEXTRA" : j.token;
+  const done = Number(BigInt(j.filledWei || "0")) / Number(BigInt(j.budgetWei || "1"));
+  return (
+    <li className="card ag-job">
+      <div className="ag-li-top">
+        <strong className="ag-job-title">
+          <TokenLogo symbol={j.token} size={30} />
+          Tempo · {j.mode} {label}
+        </strong>
+        <span className={`chip${live && !j.paused ? " live" : ""}`}>
+          {j.paused ? "Paused" : live ? "Running" : j.status === "done" ? "Done" : j.status === "cancelled" ? "Stopped" : "Failed"}
+        </span>
+      </div>
+      <p className="sub">
+        {j.mode === "DCA" ? "Buy" : "Sell"} {j.perOrder} ETH of {label}
+        {j.venue === "pons" ? " on Pons" : ""} every {j.every} min, up to {j.budget} ETH.
+      </p>
+      <div className="ag-job-nums">
+        <div>
+          <span>{j.mode === "DCA" ? "Spent" : "Sold"}</span>
+          <b>{fmtEth(j.filledWei)} ETH</b>
+        </div>
+        <div>
+          <span>Orders</span>
+          <b>{j.orders || 0}</b>
+        </div>
+        <div>
+          <span>{live ? "Next" : "Progress"}</span>
+          <b>{live && !j.paused && j.nextAt ? (j.pending ? "filling" : fmtTime(j.nextAt)) : `${Math.min(100, Math.round(done * 100))}%`}</b>
+        </div>
+      </div>
+      <div className="ag-prog" aria-hidden="true">
+        <i style={{ width: `${Math.min(100, done * 100)}%` }} />
+      </div>
+      {j.note || j.error ? <p className="ag-job-note">{j.note || j.error}</p> : null}
+      <div className="ag-job-links">
+        {j.lastTx ? (
+          <a href={`${EXPLORER}/tx/${j.lastTx}`} target="_blank" rel="noopener noreferrer">
+            Last order ↗
+          </a>
+        ) : null}
+        {j.pending?.hash ? (
+          <a href={`${EXPLORER}/tx/${j.pending.hash}`} target="_blank" rel="noopener noreferrer">
+            Pending tx ↗
+          </a>
+        ) : null}
+      </div>
+      <div className="ag-li-act">
+        {live ? (
+          <>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, j.paused ? "resume" : "pause")}>
+              {j.paused ? "Resume" : "Pause"}
+            </button>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "close")}>
+              Stop
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "delete")}>
+            Remove
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+const LIVE = ["sentry", "tempo"];
+
 export default function AgentConsole() {
   const { ready, authenticated, user, login, logout, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
@@ -518,6 +591,7 @@ export default function AgentConsole() {
   const valid = useMemo(() => validate(active, c), [active, c]);
   const summary = describe(active, c);
   const isSentry = active === "sentry";
+  const isLive = LIVE.includes(active);
 
   const set = (k, v) => setConfigs((s) => ({ ...s, [active]: { ...s[active], [k]: v } }));
 
@@ -526,17 +600,22 @@ export default function AgentConsole() {
     setTimeout(() => setFlash(""), ms);
   };
 
-  const startSentry = async () => {
+  const startLive = async () => {
     setBusy(true);
     try {
-      if (!SIGNER_ID) throw new Error("Sentry is being switched on. Please try again in a bit.");
-      if (!embedded) throw new Error("Sentry runs on your Nextra wallet. Log in with email, Google or X to get one.");
+      if (!SIGNER_ID) throw new Error(`${agent.name} is being switched on. Please try again in a bit.`);
+      if (!embedded) throw new Error(`${agent.name} runs on your Nextra wallet. Log in with email, Google or X to get one.`);
       if (!delegated) await addSigners({ address: embedded.address, signers: [{ signerId: SIGNER_ID, policyIds: [] }] });
-      await api("POST", { agent: "sentry", ...c });
-      say("Sentry is live. It buys within about a minute, then watches your exit.", 7000);
+      await api("POST", { agent: active, ...c });
+      say(
+        isSentry
+          ? "Sentry is live. It buys within about a minute, then watches your exit."
+          : `Tempo is live. First ${c.mode === "DCA" ? "buy" : "sell"} within about a minute.`,
+        7000,
+      );
       loadJobs();
     } catch (e) {
-      say(e?.message || "Could not start Sentry.", 7000);
+      say(e?.message || `Could not start ${agent.name}.`, 7000);
     } finally {
       setBusy(false);
     }
@@ -545,7 +624,7 @@ export default function AgentConsole() {
   const save = () => {
     if (!authenticated) return login();
     if (!valid) return;
-    if (isSentry) return startSentry();
+    if (isLive) return startLive();
     setMine((m) => [{ uid: Date.now().toString(36), agent: active, summary, status: "Queued", at: new Date().toISOString() }, ...m]);
     say(`${agent.name} saved. It will start once ${agent.name} goes live.`, 3500);
   };
@@ -572,8 +651,8 @@ export default function AgentConsole() {
         <h1 className="ag-title">Pick an agent. Set your rules.</h1>
         <p className="lead">Four agents, one wallet. Each one does a single job — choose the one that fits how you trade.</p>
         <div className="ag-note">
-          <span className="chip">Sentry live</span>
-          <span>Sentry trades for real from your wallet. Tempo, Perch and Echo are in preview — set them up now, they start later.</span>
+          <span className="chip">Sentry + Tempo live</span>
+          <span>Sentry and Tempo trade for real from your wallet, including $NEXTRA. Perch and Echo are in preview — set them up now, they start later.</span>
         </div>
       </section>
 
@@ -592,7 +671,7 @@ export default function AgentConsole() {
             </span>
             <span className="ag-name">
               {a.name}
-              {a.id === "sentry" ? <i className="ag-live-dot" aria-label="live" /> : null}
+              {LIVE.includes(a.id) ? <i className="ag-live-dot" aria-label="live" /> : null}
             </span>
             <span className="ag-role">{a.role}</span>
           </button>
@@ -622,13 +701,13 @@ export default function AgentConsole() {
             <li>Trades only from your own wallet</li>
             <li>Never goes past the limits you set</li>
             <li>Pause or sell any time</li>
-            {isSentry ? <li>Swaps on Uniswap, checks the price every minute</li> : null}
+            {isLive ? <li>{c.token === "NEXTRA" ? "Trades $NEXTRA on its Pons curve" : "Swaps on Uniswap"}, checks every minute</li> : null}
           </ul>
           <button type="button" className="btn lime ag-go" onClick={save} disabled={busy || (authenticated && !valid)}>
-            {!authenticated ? `Log in to ${isSentry ? "start" : "save"} ${agent.name}` : busy ? "Working…" : isSentry ? "Start Sentry" : `Save ${agent.name}`}
+            {!authenticated ? `Log in to ${isLive ? "start" : "save"} ${agent.name}` : busy ? "Working…" : isLive ? `Start ${agent.name}` : `Save ${agent.name}`}
           </button>
-          {isSentry && authenticated && !delegated ? (
-            <span className="ag-hint light">First time: approve once so Sentry can trade while you're away. You can revoke it any time.</span>
+          {isLive && authenticated && !delegated ? (
+            <span className="ag-hint light">First time: approve once so {agent.name} can trade while you're away. You can revoke it any time.</span>
           ) : null}
           {authenticated && !valid ? <span className="ag-hint light">Check the numbers above.</span> : null}
           {flash ? <span className="ag-flash" role="status">{flash}</span> : null}
@@ -641,12 +720,12 @@ export default function AgentConsole() {
         {!authenticated ? (
           <p className="sub">Log in to see your agents.</p>
         ) : jobs.length === 0 && mine.length === 0 ? (
-          <p className="sub">Nothing yet. Start Sentry above and it will show here.</p>
+          <p className="sub">Nothing yet. Start Sentry or Tempo above and it will show here.</p>
         ) : (
           <ul className="ag-list">
-            {jobs.map((j) => (
-              <SentryJob key={j.id} j={j} act={act} busy={busy} />
-            ))}
+            {jobs.map((j) =>
+              j.agent === "tempo" ? <TempoJob key={j.id} j={j} act={act} busy={busy} /> : <SentryJob key={j.id} j={j} act={act} busy={busy} />,
+            )}
             {mine.map((m) => {
               const a = AGENTS.find((x) => x.id === m.agent);
               return (

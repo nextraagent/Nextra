@@ -121,7 +121,7 @@ export default function DocsPage() {
               </a>
             </div>
             <Callout tone="note" title="Status">
-              Sentry is live and trades from your own wallet. Tempo, Perch and Echo can be set up today and start later; voting and drops switch on at launch.
+              Sentry and Tempo are live and trade from your own wallet. Perch and Echo can be set up today and start later; voting and drops switch on at launch.
             </Callout>
           </header>
 
@@ -193,11 +193,12 @@ export default function DocsPage() {
               what="Buys slowly (DCA) or sells a position in steps (TWAP) on a fixed schedule."
               settings={[
                 ["Mode", "DCA to buy in, TWAP to sell out."],
-                ["Amount per order", "ETH per buy or sell."],
-                ["Every", "10–60 seconds or 1–10 minutes."],
+                ["Token", "$NEXTRA (on its Pons curve) or a stock token (on Uniswap)."],
+                ["Amount per order", "ETH per buy, or the ETH value of tokens per sell."],
+                ["Every", "1–60 minutes."],
                 ["Total budget", "The agent stops once this is reached."],
               ]}
-              example="Buy 0.01 ETH of TSLA every 5 minutes until 0.2 ETH is spent."
+              example="Buy 0.01 ETH of $NEXTRA every 5 minutes until 0.1 ETH is spent."
             />
             <AgentDoc
               id="perch"
