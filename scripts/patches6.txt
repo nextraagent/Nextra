@@ -1,0 +1,29 @@
+@@@FILE src/app/layout.jsx
+@@@OLD
+export const metadata = {
+@@@NEW
+export const metadata = {
+  metadataBase: new URL("https://www.nextra-agent.xyz"),
+@@@END
+@@@FILE src/app/layout.jsx
+@@@OLD
+    title: "Nextra",
+    description: "Trading agents that follow your rules, and a Vault that stacks stocks. Built on Robinhood Chain.",
+@@@NEW
+    title: "Nextra: agents that trade your rules",
+    description: "Sentry & Tempo trade from your own wallet. A Vault that drops tokenized stocks to $NEXTRA holders.",
+    url: "https://www.nextra-agent.xyz",
+    siteName: "Nextra",
+    type: "website",
+@@@END
+@@@FILE src/app/layout.jsx
+@@@OLD
+  twitter: { site: "@NextraAgent" },
+@@@NEW
+  twitter: {
+    card: "summary_large_image",
+    site: "@NextraAgent",
+    title: "Nextra: agents that trade your rules",
+    description: "Sentry & Tempo trade from your own wallet. A Vault that drops tokenized stocks to $NEXTRA holders.",
+  },
+@@@END

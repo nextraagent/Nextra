@@ -4,13 +4,22 @@ import "./theme3.css";
 import "./overrides.css";
 
 export const metadata = {
+  metadataBase: new URL("https://www.nextra-agent.xyz"),
   title: "Nextra — Trading agents on Robinhood Chain",
   description: "Trading agents that follow your rules, and a Vault that stacks tokenized stocks. Built on Robinhood Chain.",
   openGraph: {
-    title: "Nextra",
-    description: "Trading agents that follow your rules, and a Vault that stacks stocks. Built on Robinhood Chain.",
+    title: "Nextra: agents that trade your rules",
+    description: "Sentry & Tempo trade from your own wallet. A Vault that drops tokenized stocks to $NEXTRA holders.",
+    url: "https://www.nextra-agent.xyz",
+    siteName: "Nextra",
+    type: "website",
   },
-  twitter: { site: "@NextraAgent" },
+  twitter: {
+    card: "summary_large_image",
+    site: "@NextraAgent",
+    title: "Nextra: agents that trade your rules",
+    description: "Sentry & Tempo trade from your own wallet. A Vault that drops tokenized stocks to $NEXTRA holders.",
+  },
 };
 
 export const viewport = {
