@@ -11,7 +11,7 @@
 
 /* ---------- 3D logo ---------- */
 .nx3d { --s: 300px; --u: calc(var(--s) / 64); position: relative; width: var(--s); height: calc(var(--s) * 1.18); display: grid; place-items: center; }
-@media (max-width: 860px) { .nx3d { --s: min(260px, 70vw); } }
+@media (max-width: 860px) { .nx3d { --s: min(200px, 54vw); } }
 
 .nx3d-glow { position: absolute; inset: 6% 0 18%; border-radius: 50%; background: radial-gradient(closest-side, rgba(93,160,0,.22), rgba(93,160,0,0) 70%); filter: blur(8px); animation: nx3d-pulse 7s ease-in-out infinite; }
 .nx3d-stage { position: relative; width: var(--s); height: var(--s); perspective: 900px; animation: nx3d-float 6s ease-in-out infinite; }

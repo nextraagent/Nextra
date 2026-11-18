@@ -1,0 +1,31 @@
+@@@FILE src/app/home-new.css
+@@@OLD
+@media (max-width: 860px) { .nx3d { --s: min(260px, 70vw); } }
+@@@NEW
+@media (max-width: 860px) { .nx3d { --s: min(200px, 54vw); } }
+@@@END
+@@@FILE src/app/token-card.css
+@@@OLD
+@media (max-width: 420px) {
+  .tc { padding: 16px 16px 14px; border-radius: 22px; }
+  .tc-stats b { font-size: 15px; }
+  .tc-perf { margin: 8px -16px 4px; }
+@@@NEW
+@media (max-width: 520px) {
+  .tc { padding: 14px 14px 12px; border-radius: 20px; }
+  .tc-id strong { font-size: 18px; }
+  .tc-id svg { width: 24px; height: 24px; }
+  .tc-chg { font-size: 12px; padding: 4px 8px; }
+  .tc-stats { margin: 10px 0 8px; border-radius: 12px; }
+  .tc-stats div { padding: 8px 10px; gap: 2px; }
+  .tc-stats span { font-size: 9px; }
+  .tc-stats b { font-size: 14px; }
+  .tc-tf button { padding: 5px 8px; min-height: 28px; font-size: 11px; }
+  .tc-chart { height: 130px; margin-top: 4px; }
+  .tc-perf { height: 18px; margin: 4px -14px 2px; }
+  .tc-ca code { font-size: 12px; }
+  .tc-ca button { min-height: 38px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+  .tc-trade { margin-top: 8px; padding: 8px 12px; min-height: 44px; border-radius: 12px; }
+  .tc-trade b { font-size: 14px; }
+  .tc-trade small { display: none; }
+@@@END

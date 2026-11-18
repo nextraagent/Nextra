@@ -1,0 +1,16 @@
+@@@FILE src/app/page.jsx
+@@@OLD
+import TokenCard from "./TokenCard";
+@@@NEW
+import TokenCard from "./TokenCard";
+import AgentStats from "./AgentStats";
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+        <Hero />
+        <Agents />
+@@@NEW
+        <Hero />
+        <AgentStats />
+        <Agents />
+@@@END
