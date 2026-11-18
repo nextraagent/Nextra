@@ -1,0 +1,39 @@
+/* ---------- Navbar ---------- */
+.nx-nav { position: sticky; top: 0; z-index: 50; background: rgba(244,239,228,.86); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid transparent; transition: border-color .2s, box-shadow .2s; }
+.nx-nav.scrolled { border-bottom-color: #e2daca; box-shadow: 0 8px 24px -18px rgba(22,22,19,.35); }
+.nx-nav-in { max-width: 1120px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+.nx-brand { display: flex; align-items: center; gap: 9px; font-family: "Space Grotesk", Inter, sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -.02em; color: #161613; text-decoration: none; min-height: 44px; }
+.nx-brand b { color: #3d6a00; }
+.nx-links { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+.nx-links a { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 10px; font-size: 15px; font-weight: 500; color: #5f5b51; text-decoration: none; transition: background .15s, color .15s; }
+.nx-links a:hover, .nx-links a.on { background: #eae3d3; color: #161613; }
+.nx-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 18px; border-radius: 12px; background: #161613; color: #f4efe4; font-weight: 600; font-size: 15px; text-decoration: none; margin-left: 6px; }
+.nx-cta:hover { background: #2c2c27; }
+.nx-burger { display: none; width: 44px; height: 44px; border: 1px solid #e2daca; background: #fbf8f1; border-radius: 12px; cursor: pointer; padding: 0; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+.nx-burger span { display: block; width: 18px; height: 2px; border-radius: 2px; background: #161613; transition: transform .25s ease, opacity .2s; }
+.nx-nav.open .nx-burger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nx-nav.open .nx-burger span:nth-child(2) { opacity: 0; }
+.nx-nav.open .nx-burger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nx-sheet { display: none; }
+
+@media (max-width: 940px) {
+  .nx-links, .nx-cta { display: none; }
+  .nx-burger { display: inline-flex; margin-left: auto; }
+  .nx-sheet:not([hidden]) { display: flex; flex-direction: column; gap: 16px; position: fixed; z-index: 49; left: 0; right: 0; top: 69px; bottom: 0; background: #f4efe4; padding: 12px 20px 28px; overflow-y: auto; animation: nxSheet .22s ease both; }
+  .nx-sheet nav { display: flex; flex-direction: column; }
+  .nx-sheet nav a { display: flex; align-items: center; justify-content: space-between; min-height: 60px; padding: 0 4px; border-bottom: 1px solid #e2daca; font-family: "Space Grotesk", Inter, sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: #161613; text-decoration: none; animation: nxItem .3s ease both; animation-delay: calc(var(--i) * 35ms); }
+  .nx-sheet nav a.on { color: #3d6a00; }
+  .nx-sheet nav a svg { color: #8a8576; }
+  .nx-sheet-cta { margin-top: auto; display: flex; align-items: center; justify-content: center; min-height: 54px; border-radius: 14px; background: #5da000; color: #fff; font-weight: 700; font-size: 17px; text-decoration: none; }
+}
+@keyframes nxSheet { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nxItem { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Footer ---------- */
+.nx-foot { border-top: 1px solid #e2daca; margin-top: 80px; }
+.nx-foot-in { max-width: 1120px; margin: 0 auto; padding: 36px 20px 44px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 24px; }
+.nx-foot-brand p { color: #5f5b51; font-size: 14px; margin-top: 8px; max-width: 320px; }
+.nx-foot h4 { text-transform: uppercase; letter-spacing: .06em; font-size: 13px; color: #5f5b51; margin: 0 0 8px; }
+.nx-foot a:not(.nx-brand) { display: block; padding: 6px 0; font-weight: 500; color: #161613; text-decoration: none; }
+.nx-foot a:not(.nx-brand):hover { color: #3d6a00; }
+@media (max-width: 720px) { .nx-foot-in { grid-template-columns: 1fr 1fr; } .nx-foot-brand { grid-column: 1 / -1; } }

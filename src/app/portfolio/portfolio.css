@@ -1,0 +1,55 @@
+/* Portfolio page — pf- prefix */
+.pf-head { padding-bottom: 4px; }
+.pf-total { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 18px; }
+.pf-total strong { font-family: "Space Grotesk", Inter, sans-serif; font-size: clamp(40px, 8vw, 64px); line-height: 1; letter-spacing: -.03em; }
+.pf-total small { font-size: .4em; color: #6b675c; letter-spacing: 0; }
+.pf-sub { font-size: 14px; color: #6b675c; }
+.pf-mono { font-family: "JetBrains Mono", monospace; }
+
+.pf-acct { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+.pf-acct-id { display: flex; align-items: center; gap: 12px; }
+.pf-acct-id > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pf-addr { align-self: flex-start; border: 0; background: #ece6d8; border-radius: 10px; padding: 6px 10px; font: 600 15px "JetBrains Mono", monospace; color: #161613; cursor: pointer; }
+.pf-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pf-actions .btn { justify-content: center; text-align: center; min-height: 46px; }
+.pf-actions .btn.lime { background: #5da000; border-color: #5da000; color: #fff; }
+.pf-actions .btn:disabled { opacity: .45; cursor: not-allowed; }
+.pf-note { margin: 0; font-size: 13px; color: #6b675c; line-height: 1.5; }
+
+.pf-hold h2 { margin-bottom: 12px; }
+.pf-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.pf-list li { display: grid; grid-template-columns: 44px 1fr auto auto; align-items: center; gap: 12px; padding: 14px 16px; }
+.pf-tok { width: 44px; height: 44px; border-radius: 13px; background: #161613; color: #8ad11a; display: grid; place-items: center; font: 700 15px "JetBrains Mono", monospace; }
+.pf-tok.eth { background: #ece6d8; color: #161613; font-size: 20px; }
+.pf-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pf-name strong { font-family: "Space Grotesk", Inter, sans-serif; font-size: 18px; }
+.pf-name span, .pf-name a { font-size: 13px; color: #6b675c; }
+.pf-name a { color: #3d6a00; font-weight: 600; }
+.pf-amt { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.pf-amt strong { font: 600 16px "JetBrains Mono", monospace; }
+.pf-amt span { font-size: 12px; color: #6b675c; }
+.pf-row-send { padding: 8px 14px; font-size: 14px; }
+.pf-empty a, .pf-foot a { color: #3d6a00; font-weight: 600; }
+.pf-empty { margin-top: 12px; }
+.pf-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 14px; }
+.pf-linkbtn { border: 0; background: none; color: #6b675c; font: inherit; cursor: pointer; text-decoration: underline; }
+
+.pf-sheet { position: fixed; inset: 0; z-index: 60; background: rgba(22,22,19,.45); display: flex; align-items: flex-end; justify-content: center; padding: 12px; }
+.pf-sheet-in { width: 100%; max-width: 480px; padding: 20px; border-radius: 22px; background: #fbf8f1; max-height: 92vh; overflow-y: auto; animation: pfUp .22s ease both; }
+@media (min-width: 640px) { .pf-sheet { align-items: center; } }
+@keyframes pfUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.pf-sheet-head { display: flex; justify-content: space-between; align-items: center; }
+.pf-sheet-head h2 { margin: 0; font-family: "Space Grotesk", Inter, sans-serif; font-size: 26px; }
+.pf-x { width: 40px; height: 40px; border-radius: 12px; border: 1px solid #e2daca; background: #fff; font-size: 22px; cursor: pointer; }
+.pf-max { border: 0; background: #ece6d8; border-radius: 8px; padding: 4px 10px; font: 600 13px Inter, sans-serif; cursor: pointer; margin-left: 6px; }
+.pf-warn { margin: 0; font-size: 13px; color: #8a5a00; background: #fff4dc; border: 1px solid #f1d9a3; border-radius: 12px; padding: 10px 12px; }
+.pf-done { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 18px 0 4px; }
+.pf-done strong { font-family: "Space Grotesk", Inter, sans-serif; font-size: 26px; }
+.pf-done .btn { width: 100%; justify-content: center; }
+.pf-done-dot { width: 18px; height: 18px; border-radius: 50%; background: #5da000; box-shadow: 0 0 0 6px #dcefc0; }
+
+@media (max-width: 520px) {
+  .pf-list li { grid-template-columns: 40px 1fr auto; }
+  .pf-row-send { grid-column: 1 / -1; width: 100%; justify-content: center; }
+  .pf-tok { width: 40px; height: 40px; }
+}

@@ -1,0 +1,71 @@
+/* ---------- Homepage hero ---------- */
+.nx-hero { display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 32px; padding-top: 56px; }
+.nx-hero h1 { font-size: clamp(38px, 6.4vw, 68px); line-height: 1.02; margin: 0 0 18px; }
+.nx-hero h1 em { font-style: normal; color: inherit; background: linear-gradient(to top, rgba(93,160,0,.5) 0, rgba(93,160,0,.5) .6em, transparent .6em); border-radius: 4px; padding: 0 .06em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.nx-trust { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 24px; color: #5f5b51; font-size: 14px; }
+.nx-trust span { display: inline-flex; align-items: center; gap: 7px; }
+.nx-hero-art { display: flex; justify-content: center; }
+@media (max-width: 860px) {
+  .nx-hero { grid-template-columns: 1fr; padding-top: 36px; gap: 8px; }
+}
+
+/* ---------- 3D logo ---------- */
+.nx3d { --s: 300px; --u: calc(var(--s) / 64); position: relative; width: var(--s); height: calc(var(--s) * 1.18); display: grid; place-items: center; }
+@media (max-width: 860px) { .nx3d { --s: min(260px, 70vw); } }
+
+.nx3d-glow { position: absolute; inset: 6% 0 18%; border-radius: 50%; background: radial-gradient(closest-side, rgba(93,160,0,.22), rgba(93,160,0,0) 70%); filter: blur(8px); animation: nx3d-pulse 7s ease-in-out infinite; }
+.nx3d-stage { position: relative; width: var(--s); height: var(--s); perspective: 900px; animation: nx3d-float 6s ease-in-out infinite; }
+.nx3d-obj { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(16deg) rotateY(-24deg); animation: nx3d-turn 10s ease-in-out infinite alternate; }
+
+.nx3d-sq { position: absolute; width: calc(38 * var(--u)); height: calc(38 * var(--u)); transform-style: preserve-3d; }
+.nx3d-ink { left: calc(3.5 * var(--u)); top: calc(3.5 * var(--u)); }
+.nx3d-green { left: calc(22.5 * var(--u)); top: calc(22.5 * var(--u)); transform: translateZ(9px); }
+
+.nx3d-layer { position: absolute; inset: 0; box-sizing: border-box; border: calc(7 * var(--u)) solid #161613; border-radius: calc(12.5 * var(--u)); backface-visibility: visible; }
+.nx3d-ink .nx3d-layer.front { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.10), 0 0 0 1.5px rgba(255,255,255,.06); }
+.nx3d-green .nx3d-layer.front { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.28), 0 0 0 1.5px rgba(255,255,255,.14); }
+
+.nx3d-shadow { position: absolute; bottom: 2%; left: 50%; width: 62%; height: 7%; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(22,22,19,.28), rgba(22,22,19,0)); animation: nx3d-shadow 6s ease-in-out infinite; }
+
+@keyframes nx3d-turn {
+  0%   { transform: rotateX(16deg) rotateY(-26deg) rotateZ(-2deg); }
+  100% { transform: rotateX(10deg) rotateY(26deg) rotateZ(2deg); }
+}
+@keyframes nx3d-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes nx3d-shadow {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+  50% { transform: translateX(-50%) scale(.82); opacity: .6; }
+}
+@keyframes nx3d-pulse {
+  0%, 100% { opacity: .7; transform: scale(.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx3d-glow, .nx3d-stage, .nx3d-obj, .nx3d-shadow { animation: none; }
+}
+
+/* ---------- Agents grid ---------- */
+.nx-agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 28px; }
+.nx-agent { display: flex; flex-direction: column; gap: 6px; padding: 22px; border-radius: 20px; background: #fbf8f1; border: 1px solid #e2daca; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.nx-agent:hover { transform: translateY(-3px); border-color: #5da000; box-shadow: 0 18px 40px -24px rgba(22,22,19,.35); }
+.nx-agent-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.nx-agent-ico { width: 48px; height: 48px; border-radius: 14px; background: #161613; color: #f4efe4; display: grid; place-items: center; }
+.nx-agent-n { font-family: "JetBrains Mono", monospace; font-size: 13px; color: #3d6a00; }
+.nx-agent h3 { font-size: 26px; margin: 0; }
+.nx-agent-role { font-size: 13px; font-weight: 600; color: #5da000; margin-bottom: 4px; }
+.nx-agent .opts { margin-top: 6px; }
+.nx-agent-go { margin-top: auto; padding-top: 12px; font-weight: 600; font-size: 14px; color: #161613; }
+.nx-agent:hover .nx-agent-go { color: #3d6a00; }
+
+/* ---------- Roadmap timeline ---------- */
+.nx-road { list-style: none; margin: 28px 0 0; padding: 0; position: relative; display: grid; gap: 14px; }
+.nx-road::before { content: ""; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 2px; background: #e2daca; }
+.nx-road-item { display: grid; grid-template-columns: 24px 1fr; gap: 16px; align-items: start; }
+.nx-road-item > div { background: #fbf8f1; border: 1px solid #e2daca; border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.nx-road-item h3 { font-size: 20px; margin: 0; }
+.nx-road-dot { position: relative; z-index: 1; width: 24px; height: 24px; margin-top: 18px; border-radius: 50%; background: #f4efe4; border: 2px solid #c9c0ac; }
+.nx-road-item.s-live .nx-road-dot { background: #5da000; border-color: #5da000; box-shadow: 0 0 0 5px #dcefc0; }
+.nx-road-item.s-building .nx-road-dot { border-color: #5da000; background: radial-gradient(circle, #5da000 0 4px, #f4efe4 5px); }

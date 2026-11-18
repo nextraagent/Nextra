@@ -1,0 +1,10 @@
+/* Site-wide overrides */
+/* Use the logo's dark green everywhere instead of lime */
+:root { --lime: #5da000 !important; }
+.btn.lime { background: #5da000 !important; border-color: #5da000 !important; color: #fff !important; }
+.btn.lime:hover { background: #4e8700 !important; border-color: #4e8700 !important; }
+.chip.live { background: #5da000 !important; color: #fff !important; }
+.hero h1 em { color: #fff; }
+.steps3 li:before { color: #fff !important; }
+/* Hide footer disclaimer line */
+.site-foot .legal { display: none !important; }

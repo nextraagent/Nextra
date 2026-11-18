@@ -1,0 +1,18 @@
+{
+  "name": "nextra-vault",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@privy-io/react-auth": "latest",
+    "@vercel/blob": "^1.1.1",
+    "next": "16.4.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "viem": "^2.31.0"
+  }
+}
