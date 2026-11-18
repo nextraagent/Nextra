@@ -1,35 +1,17 @@
-import { list, put, del } from "@vercel/blob";
+import { redis } from "./store";
 
-// One file per wallet per round: votes/<round>/<address>--<SYMBOL>
-const prefix = (round) => `votes/${round}/`;
-
-async function listAll(p) {
-  const blobs = [];
-  let cursor;
-  do {
-    const r = await list({ prefix: p, cursor, limit: 1000 });
-    blobs.push(...r.blobs);
-    cursor = r.hasMore ? r.cursor : undefined;
-  } while (cursor);
-  return blobs;
-}
+// One hash per round: votes:<round> → { <address>: <SYMBOL> }. Re-voting just overwrites.
+const key = (round) => `votes:${round}`;
 
 export async function castVote(round, address, symbol) {
-  const mine = await listAll(`${prefix(round)}${address.toLowerCase()}--`);
-  if (mine.length) await del(mine.map((b) => b.url));
-  await put(`${prefix(round)}${address.toLowerCase()}--${symbol}`, symbol, {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "text/plain",
-  });
+  await redis("HSET", key(round), address.toLowerCase(), symbol);
 }
 
 export async function tally(round, candidates = []) {
   const counts = Object.fromEntries(candidates.map((c) => [c, 0]));
-  const blobs = await listAll(prefix(round));
-  for (const b of blobs) {
-    const sym = b.pathname.split("--").pop();
+  const flat = (await redis("HGETALL", key(round))) || [];
+  for (let i = 1; i < flat.length; i += 2) {
+    const sym = flat[i];
     if (sym) counts[sym] = (counts[sym] || 0) + 1;
   }
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -43,17 +25,14 @@ export function winner(t, fallback) {
 }
 
 export async function saveDropLog(date, data) {
-  await put(`drops/${date}.json`, JSON.stringify(data, null, 2), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-  });
+  await redis("SET", `drops:${date}`, JSON.stringify(data));
 }
 
 export async function getDropLog(date) {
-  const r = await list({ prefix: `drops/${date}.json`, limit: 1 });
-  if (!r.blobs.length) return null;
-  const res = await fetch(r.blobs[0].url, { cache: "no-store" });
-  return res.ok ? res.json() : null;
+  const s = await redis("GET", `drops:${date}`);
+  try {
+    return s ? JSON.parse(s) : null;
+  } catch {
+    return null;
+  }
 }

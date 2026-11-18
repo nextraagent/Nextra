@@ -18,7 +18,7 @@ export async function GET() {
       next: { ...n, winner: winner(n, c.defaultStock) },
       candidates: c.candidates,
       live: Boolean(c.token),
-    });
+    }, { headers: { "cache-control": "public, s-maxage=20, stale-while-revalidate=60" } });
   } catch (e) {
     return NextResponse.json({ error: "Votes are not available yet.", candidates: c.candidates, live: false }, { status: 503 });
   }

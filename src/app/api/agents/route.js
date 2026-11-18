@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { parseEther } from "viem";
 import { embeddedWallet, getPrivyUser, verifyAccessToken } from "../../../lib/privyServer";
-import { ACTIVE, deleteJob, getJob, listJobs, saveJob } from "../../../lib/sentry";
-import { TEMPO_ACTIVE, deleteTempo, getTempo, listTempo, saveTempo } from "../../../lib/tempo";
-import { PERCH_ACTIVE, deletePerch, getPerch, listPerch, perchReference, savePerch } from "../../../lib/perch";
+import { ACTIVE, deleteJob, getJob, saveJob } from "../../../lib/sentry";
+import { TEMPO_ACTIVE, deleteTempo, getTempo, saveTempo } from "../../../lib/tempo";
+import { PERCH_ACTIVE, deletePerch, getPerch, perchReference, savePerch } from "../../../lib/perch";
+import { listUserJobs } from "../../../lib/store";
+import { recordAgentCreated } from "../../../lib/ledger";
 import { stockAddress } from "../../../lib/stocks";
 import { curveFor } from "../../../lib/pons";
 import { NEXTRA } from "../../../lib/nextra";
@@ -30,11 +32,7 @@ export async function GET(req) {
   } catch (e) {
     return err(e.message, 401);
   }
-  const [s, t, p] = await Promise.all([listJobs(), listTempo(), listPerch()]);
-  const jobs = [...s.map((j) => ({ agent: "sentry", ...j })), ...t, ...p]
-    .filter((j) => j.userId === did)
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    .map(publicJob);
+  const jobs = (await listUserJobs(did)).map(publicJob);
   return NextResponse.json({ jobs });
 }
 
@@ -79,7 +77,7 @@ export async function POST(req) {
     if (!EXP[b.expiry]) return err("Pick an expiry.");
     const { w, error } = await wallet(did);
     if (error) return err(error);
-    const mine = (await listPerch()).filter((j) => j.userId === did && PERCH_ACTIVE.includes(j.status));
+    const mine = (await listUserJobs(did)).filter((j) => j.agent === "perch" && PERCH_ACTIVE.includes(j.status));
     if (mine.length >= 10) return err("You can run up to 10 Perch orders at once.");
     const draft = {
       id: randomUUID(),
@@ -107,6 +105,7 @@ export async function POST(req) {
     }
     draft.log = [{ at: now, msg: `Created. Watching for ${side === "Buy" ? "−" : "+"}${offset}%.` }];
     const job = await savePerch(draft);
+    await recordAgentCreated(did).catch(() => {});
     return NextResponse.json({ job: publicJob(job) });
   }
 
@@ -120,7 +119,7 @@ export async function POST(req) {
     if (!(Number.isInteger(every) && every >= 1 && every <= 60)) return err("Interval must be 1–60 minutes.");
     const { w, error } = await wallet(did);
     if (error) return err(error);
-    const mine = (await listTempo()).filter((j) => j.userId === did && TEMPO_ACTIVE.includes(j.status));
+    const mine = (await listUserJobs(did)).filter((j) => j.agent === "tempo" && TEMPO_ACTIVE.includes(j.status));
     if (mine.length >= 10) return err("You can run up to 10 Tempo agents at once.");
     const job = await saveTempo({
       id: randomUUID(),
@@ -145,6 +144,7 @@ export async function POST(req) {
       createdAt: now,
       log: [{ at: now, msg: `Created. First ${mode === "DCA" ? "buy" : "sell"} within a minute.` }],
     });
+    await recordAgentCreated(did).catch(() => {});
     return NextResponse.json({ job: publicJob(job) });
   }
 
@@ -157,7 +157,7 @@ export async function POST(req) {
   const { w, error } = await wallet(did);
   if (error) return err(error);
 
-  const mine = (await listJobs()).filter((j) => j.userId === did && ACTIVE.includes(j.status));
+  const mine = (await listUserJobs(did)).filter((j) => j.agent === "sentry" && ACTIVE.includes(j.status));
   if (mine.length >= 10) return err("You can run up to 10 Sentry agents at once.");
 
   const job = await saveJob({
@@ -177,6 +177,7 @@ export async function POST(req) {
     createdAt: now,
     log: [{ at: now, msg: "Created. Buying within a minute." }],
   });
+  await recordAgentCreated(did).catch(() => {});
   return NextResponse.json({ job: publicJob(job) });
 }
 
@@ -211,7 +212,7 @@ export async function PATCH(req) {
       job.note = "Cancelled.";
     } else if (action === "delete") {
       if (PERCH_ACTIVE.includes(job.status)) return err("Cancel the order before deleting.");
-      await deletePerch(job.id);
+      await deletePerch(job);
       return NextResponse.json({ ok: true });
     } else return err("Unknown action.");
     await savePerch(job);
@@ -229,7 +230,7 @@ export async function PATCH(req) {
       job.pending = null;
     } else if (action === "delete") {
       if (TEMPO_ACTIVE.includes(job.status)) return err("Stop the agent before deleting.");
-      await deleteTempo(job.id);
+      await deleteTempo(job);
       return NextResponse.json({ ok: true });
     } else return err("Unknown action.");
     await saveTempo(job);
@@ -244,7 +245,7 @@ export async function PATCH(req) {
     else return err("This agent can't be closed right now.");
   } else if (action === "delete") {
     if (ACTIVE.includes(job.status)) return err("Close the position before deleting.");
-    await deleteJob(job.id);
+    await deleteJob(job);
     return NextResponse.json({ ok: true });
   } else return err("Unknown action.");
 

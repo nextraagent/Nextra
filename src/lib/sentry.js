@@ -1,6 +1,6 @@
 // Sentry engine: buy once, then watch the position and exit at take-profit or stop-loss.
-// Jobs live in Vercel Blob as agents/sentry/<id>.json. The tick runs every minute.
-import { del, list, put } from "@vercel/blob";
+// Jobs live in Upstash Redis (see store.js). The tick runs every minute.
+import { deleteAgentJob, getAgentJob, persistAfterStep, saveAgentJob } from "./store";
 import { toEventSelector } from "viem";
 import { publicClient } from "./chain";
 import {
@@ -18,55 +18,21 @@ import {
 } from "./swap";
 import { ponsBuyCall, ponsSellCall, quoteBuy, quoteSell } from "./pons";
 
-const P = "agents/sentry/";
-const LOCK = `${P}_lock.json`;
 export const ACTIVE = ["pending", "buying", "holding", "selling"];
 const SLIPPAGE_BPS = Number(process.env.SENTRY_SLIPPAGE_BPS || 150);
 // memecoin curves move faster than stock pools, so Pons trades get a wider default
 const PONS_SLIPPAGE_BPS = Number(process.env.SENTRY_PONS_SLIPPAGE_BPS || 300);
 
-async function readBlob(url) {
-  const r = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
-  return r.ok ? r.json() : null;
-}
-
-async function listAll(prefix) {
-  const blobs = [];
-  let cursor;
-  do {
-    const r = await list({ prefix, cursor, limit: 1000 });
-    blobs.push(...r.blobs);
-    cursor = r.hasMore ? r.cursor : undefined;
-  } while (cursor);
-  return blobs;
-}
-
-export async function listJobs() {
-  const blobs = (await listAll(P)).filter((b) => !b.pathname.slice(P.length).startsWith("_"));
-  const jobs = await Promise.all(blobs.map((b) => readBlob(b.url).catch(() => null)));
-  return jobs.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-}
-
 export async function getJob(id) {
-  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
-  return r.blobs.length ? readBlob(r.blobs[0].url) : null;
+  return getAgentJob("sentry", id);
 }
 
 export async function saveJob(job) {
-  job.updatedAt = new Date().toISOString();
-  await put(`${P}${job.id}.json`, JSON.stringify(job), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: "application/json",
-    cacheControlMaxAge: 60,
-  });
-  return job;
+  return saveAgentJob("sentry", job, ACTIVE.includes(job.status));
 }
 
-export async function deleteJob(id) {
-  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
-  if (r.blobs.length) await del(r.blobs[0].url);
+export async function deleteJob(job) {
+  return deleteAgentJob("sentry", job);
 }
 
 const log = (job, msg) => {
@@ -260,19 +226,11 @@ async function step(job) {
   }
 }
 
-export async function tick() {
-  const started = Date.now();
-  const lockList = await list({ prefix: LOCK, limit: 1 });
-  if (lockList.blobs.length) {
-    const lock = await readBlob(lockList.blobs[0].url).catch(() => null);
-    if (lock?.at && started - lock.at < 55_000) return { skipped: "locked" };
-  }
-  await put(LOCK, JSON.stringify({ at: started }), { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60 });
-
-  const jobs = (await listJobs()).filter((j) => ACTIVE.includes(j.status));
+// Runs every active Sentry job once. The caller (tick route) holds the lock and loads the jobs.
+export async function tick(jobs = [], deadline = Date.now() + 45_000) {
   const results = [];
   for (const job of jobs) {
-    if (Date.now() - started > 45_000) break;
+    if (Date.now() > deadline) break;
     const before = JSON.stringify(job);
     try {
       await step(job);
@@ -282,9 +240,8 @@ export async function tick() {
       job.errors = (job.errors || 0) + 1;
       if (job.status === "pending" && job.errors >= 10) job.status = "failed";
     }
-    if (JSON.stringify(job) !== before) await saveJob(job);
+    await persistAfterStep("sentry", job, before, ACTIVE.includes(job.status));
     results.push({ id: job.id, status: job.status, error: job.error || undefined });
   }
-  await put(LOCK, JSON.stringify({ at: 0 }), { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60 });
-  return { processed: results.length, results, ms: Date.now() - started };
+  return { processed: results.length, results };
 }

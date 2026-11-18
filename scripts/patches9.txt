@@ -1,0 +1,396 @@
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+import { ACTIVE, deleteJob, getJob, listJobs, saveJob } from "../../../lib/sentry";
+import { TEMPO_ACTIVE, deleteTempo, getTempo, listTempo, saveTempo } from "../../../lib/tempo";
+import { PERCH_ACTIVE, deletePerch, getPerch, listPerch, perchReference, savePerch } from "../../../lib/perch";
+@@@NEW
+import { ACTIVE, deleteJob, getJob, saveJob } from "../../../lib/sentry";
+import { TEMPO_ACTIVE, deleteTempo, getTempo, saveTempo } from "../../../lib/tempo";
+import { PERCH_ACTIVE, deletePerch, getPerch, perchReference, savePerch } from "../../../lib/perch";
+import { listUserJobs } from "../../../lib/store";
+import { recordAgentCreated } from "../../../lib/ledger";
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const [s, t, p] = await Promise.all([listJobs(), listTempo(), listPerch()]);
+  const jobs = [...s.map((j) => ({ agent: "sentry", ...j })), ...t, ...p]
+    .filter((j) => j.userId === did)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .map(publicJob);
+@@@NEW
+  const jobs = (await listUserJobs(did)).map(publicJob);
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    const mine = (await listPerch()).filter((j) => j.userId === did && PERCH_ACTIVE.includes(j.status));
+@@@NEW
+    const mine = (await listUserJobs(did)).filter((j) => j.agent === "perch" && PERCH_ACTIVE.includes(j.status));
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    const job = await savePerch(draft);
+@@@NEW
+    const job = await savePerch(draft);
+    await recordAgentCreated(did).catch(() => {});
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    const mine = (await listTempo()).filter((j) => j.userId === did && TEMPO_ACTIVE.includes(j.status));
+@@@NEW
+    const mine = (await listUserJobs(did)).filter((j) => j.agent === "tempo" && TEMPO_ACTIVE.includes(j.status));
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    });
+@@@NEW
+    });
+    await recordAgentCreated(did).catch(() => {});
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const mine = (await listJobs()).filter((j) => j.userId === did && ACTIVE.includes(j.status));
+@@@NEW
+  const mine = (await listUserJobs(did)).filter((j) => j.agent === "sentry" && ACTIVE.includes(j.status));
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    log: [{ at: now, msg: "Created. Buying within a minute." }],
+  });
+  return NextResponse.json({ job: publicJob(job) });
+@@@NEW
+    log: [{ at: now, msg: "Created. Buying within a minute." }],
+  });
+  await recordAgentCreated(did).catch(() => {});
+  return NextResponse.json({ job: publicJob(job) });
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+      await deletePerch(job.id);
+@@@NEW
+      await deletePerch(job);
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+      await deleteTempo(job.id);
+@@@NEW
+      await deleteTempo(job);
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    await deleteJob(job.id);
+@@@NEW
+    await deleteJob(job);
+@@@END
+@@@FILE src/app/api/vote/route.js
+@@@OLD
+    });
+@@@NEW
+    }, { headers: { "cache-control": "public, s-maxage=20, stale-while-revalidate=60" } });
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+import { del, list, put } from "@vercel/blob";
+@@@NEW
+import { deleteAgentJob, getAgentJob, persistAfterStep, saveAgentJob } from "./store";
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+const P = "agents/perch/";
+const LOCK = `${P}_lock.json`;
+@@@NEW
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+const blobOpts = { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60 };
+
+async function readBlob(url) {
+  const r = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
+  return r.ok ? r.json() : null;
+}
+
+export async function listPerch() {
+  const blobs = [];
+  let cursor;
+  do {
+    const r = await list({ prefix: P, cursor, limit: 1000 });
+    blobs.push(...r.blobs);
+    cursor = r.hasMore ? r.cursor : undefined;
+  } while (cursor);
+  const jobs = await Promise.all(blobs.filter((b) => !b.pathname.slice(P.length).startsWith("_")).map((b) => readBlob(b.url).catch(() => null)));
+  return jobs.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+@@@NEW
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
+  return r.blobs.length ? readBlob(r.blobs[0].url) : null;
+@@@NEW
+  return getAgentJob("perch", id);
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+  job.updatedAt = new Date().toISOString();
+  await put(`${P}${job.id}.json`, JSON.stringify(job), blobOpts);
+  return job;
+@@@NEW
+  return saveAgentJob("perch", job, PERCH_ACTIVE.includes(job.status));
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+export async function deletePerch(id) {
+  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
+  if (r.blobs.length) await del(r.blobs[0].url);
+@@@NEW
+export async function deletePerch(job) {
+  return deleteAgentJob("perch", job);
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+export async function tickPerch(deadline) {
+  const started = Date.now();
+  const lockList = await list({ prefix: LOCK, limit: 1 });
+  if (lockList.blobs.length) {
+    const lock = await readBlob(lockList.blobs[0].url).catch(() => null);
+    if (lock?.at && started - lock.at < 55_000) return { skipped: "locked" };
+  }
+  await put(LOCK, JSON.stringify({ at: started }), blobOpts);
+  const jobs = (await listPerch()).filter((j) => PERCH_ACTIVE.includes(j.status));
+@@@NEW
+export async function tickPerch(jobs = [], deadline = Date.now() + 50_000) {
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+    if (JSON.stringify(job) !== before) await savePerch(job);
+@@@NEW
+    await persistAfterStep("perch", job, before, PERCH_ACTIVE.includes(job.status));
+@@@END
+@@@FILE src/lib/perch.js
+@@@OLD
+  await put(LOCK, JSON.stringify({ at: 0 }), blobOpts);
+@@@NEW
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+// Jobs live in Vercel Blob as agents/sentry/<id>.json. The tick runs every minute.
+import { del, list, put } from "@vercel/blob";
+@@@NEW
+// Jobs live in Upstash Redis (see store.js). The tick runs every minute.
+import { deleteAgentJob, getAgentJob, persistAfterStep, saveAgentJob } from "./store";
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+const P = "agents/sentry/";
+const LOCK = `${P}_lock.json`;
+@@@NEW
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+async function readBlob(url) {
+  const r = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
+  return r.ok ? r.json() : null;
+}
+
+async function listAll(prefix) {
+  const blobs = [];
+  let cursor;
+  do {
+    const r = await list({ prefix, cursor, limit: 1000 });
+    blobs.push(...r.blobs);
+    cursor = r.hasMore ? r.cursor : undefined;
+  } while (cursor);
+  return blobs;
+}
+
+export async function listJobs() {
+  const blobs = (await listAll(P)).filter((b) => !b.pathname.slice(P.length).startsWith("_"));
+  const jobs = await Promise.all(blobs.map((b) => readBlob(b.url).catch(() => null)));
+  return jobs.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+@@@NEW
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
+  return r.blobs.length ? readBlob(r.blobs[0].url) : null;
+@@@NEW
+  return getAgentJob("sentry", id);
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+  job.updatedAt = new Date().toISOString();
+  await put(`${P}${job.id}.json`, JSON.stringify(job), {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+    cacheControlMaxAge: 60,
+  });
+  return job;
+@@@NEW
+  return saveAgentJob("sentry", job, ACTIVE.includes(job.status));
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+export async function deleteJob(id) {
+  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
+  if (r.blobs.length) await del(r.blobs[0].url);
+@@@NEW
+export async function deleteJob(job) {
+  return deleteAgentJob("sentry", job);
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+export async function tick() {
+  const started = Date.now();
+  const lockList = await list({ prefix: LOCK, limit: 1 });
+  if (lockList.blobs.length) {
+    const lock = await readBlob(lockList.blobs[0].url).catch(() => null);
+    if (lock?.at && started - lock.at < 55_000) return { skipped: "locked" };
+  }
+  await put(LOCK, JSON.stringify({ at: started }), { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60 });
+
+  const jobs = (await listJobs()).filter((j) => ACTIVE.includes(j.status));
+@@@NEW
+// Runs every active Sentry job once. The caller (tick route) holds the lock and loads the jobs.
+export async function tick(jobs = [], deadline = Date.now() + 45_000) {
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+    if (Date.now() - started > 45_000) break;
+@@@NEW
+    if (Date.now() > deadline) break;
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+    if (JSON.stringify(job) !== before) await saveJob(job);
+@@@NEW
+    await persistAfterStep("sentry", job, before, ACTIVE.includes(job.status));
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+  await put(LOCK, JSON.stringify({ at: 0 }), { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60 });
+  return { processed: results.length, results, ms: Date.now() - started };
+@@@NEW
+  return { processed: results.length, results };
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+// Jobs live in Vercel Blob as agents/tempo/<id>.json and advance on the same minute tick as Sentry.
+@@@NEW
+// Jobs live in Upstash Redis (see store.js) and advance on the same minute tick as Sentry.
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+import { del, list, put } from "@vercel/blob";
+@@@NEW
+import { deleteAgentJob, getAgentJob, persistAfterStep, saveAgentJob } from "./store";
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+const P = "agents/tempo/";
+const LOCK = `${P}_lock.json`;
+@@@NEW
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+const blobOpts = { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60 };
+
+async function readBlob(url) {
+  const r = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
+  return r.ok ? r.json() : null;
+}
+
+export async function listTempo() {
+  const blobs = [];
+  let cursor;
+  do {
+    const r = await list({ prefix: P, cursor, limit: 1000 });
+    blobs.push(...r.blobs);
+    cursor = r.hasMore ? r.cursor : undefined;
+  } while (cursor);
+  const jobs = await Promise.all(blobs.filter((b) => !b.pathname.slice(P.length).startsWith("_")).map((b) => readBlob(b.url).catch(() => null)));
+  return jobs.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+@@@NEW
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
+  return r.blobs.length ? readBlob(r.blobs[0].url) : null;
+@@@NEW
+  return getAgentJob("tempo", id);
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+  job.updatedAt = new Date().toISOString();
+  await put(`${P}${job.id}.json`, JSON.stringify(job), blobOpts);
+  return job;
+@@@NEW
+  return saveAgentJob("tempo", job, TEMPO_ACTIVE.includes(job.status));
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+export async function deleteTempo(id) {
+  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
+  if (r.blobs.length) await del(r.blobs[0].url);
+@@@NEW
+export async function deleteTempo(job) {
+  return deleteAgentJob("tempo", job);
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+export async function tickTempo(deadline) {
+  const started = Date.now();
+  const lockList = await list({ prefix: LOCK, limit: 1 });
+  if (lockList.blobs.length) {
+    const lock = await readBlob(lockList.blobs[0].url).catch(() => null);
+    if (lock?.at && started - lock.at < 55_000) return { skipped: "locked" };
+  }
+  await put(LOCK, JSON.stringify({ at: started }), blobOpts);
+  const jobs = (await listTempo()).filter((j) => TEMPO_ACTIVE.includes(j.status));
+@@@NEW
+export async function tickTempo(jobs = [], deadline = Date.now() + 40_000) {
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+    if (JSON.stringify(job) !== before) await saveTempo(job);
+@@@NEW
+    await persistAfterStep("tempo", job, before, TEMPO_ACTIVE.includes(job.status));
+@@@END
+@@@FILE src/lib/tempo.js
+@@@OLD
+  await put(LOCK, JSON.stringify({ at: 0 }), blobOpts);
+@@@NEW
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+import { tickPerch } from "../../../../lib/perch";
+@@@NEW
+import { tickPerch } from "../../../../lib/perch";
+import { acquireLock, loadActive } from "../../../../lib/store";
+import { recordTrades, tradeMark } from "../../../../lib/ledger";
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+    const started = Date.now();
+    const sentry = await tick();
+    const tempo = await tickTempo(started + 42_000).catch((e) => ({ error: String(e?.message || e).slice(0, 200) }));
+    const perch = await tickPerch(started + 53_000).catch((e) => ({ error: String(e?.message || e).slice(0, 200) }));
+    return NextResponse.json({ ...sentry, tempo, perch });
+@@@NEW
+    if (!(await acquireLock("tick", 50))) return NextResponse.json({ skipped: "locked" });
+    const started = Date.now();
+    const jobs = await loadActive();
+    const marks = Object.fromEntries(Object.entries(jobs).map(([a, js]) => [a, js.map((j) => tradeMark(a, j))]));
+    const fail = (e) => ({ error: String(e?.message || e).slice(0, 200) });
+    const sentry = await tick(jobs.sentry, started + 30_000).catch(fail);
+    const tempo = await tickTempo(jobs.tempo, started + 42_000).catch(fail);
+    const perch = await tickPerch(jobs.perch, started + 52_000).catch(fail);
+    const moved = Object.entries(jobs).some(([a, js]) => js.some((j, i) => tradeMark(a, j) !== marks[a][i]));
+    if (moved) await recordTrades(jobs).catch(() => {});
+    return NextResponse.json({ sentry, tempo, perch, ms: Date.now() - started });
+@@@END

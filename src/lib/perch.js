@@ -2,47 +2,22 @@
 // or sell when it rises X% above. Checks every minute on the shared tick; cancels at expiry.
 // Prices are measured with real quotes at the order's own size, so price impact is included.
 // $NEXTRA trades on its Pons curve; stock tokens trade on Uniswap.
-import { del, list, put } from "@vercel/blob";
+import { deleteAgentJob, getAgentJob, persistAfterStep, saveAgentJob } from "./store";
 import { publicClient } from "./chain";
 import { approveCall, bestRoute, buyCall, getWeth, ROUTER, sellCall, sendFromWallet, tokenAllowance, tokenBalance, GAS_BUFFER } from "./swap";
 import { ponsBuyCall, ponsSellCall, quoteBuy, quoteSell } from "./pons";
 
-const P = "agents/perch/";
-const LOCK = `${P}_lock.json`;
 export const PERCH_ACTIVE = ["waiting", "filling"];
-const blobOpts = { access: "public", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", cacheControlMaxAge: 60 };
-
-async function readBlob(url) {
-  const r = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
-  return r.ok ? r.json() : null;
-}
-
-export async function listPerch() {
-  const blobs = [];
-  let cursor;
-  do {
-    const r = await list({ prefix: P, cursor, limit: 1000 });
-    blobs.push(...r.blobs);
-    cursor = r.hasMore ? r.cursor : undefined;
-  } while (cursor);
-  const jobs = await Promise.all(blobs.filter((b) => !b.pathname.slice(P.length).startsWith("_")).map((b) => readBlob(b.url).catch(() => null)));
-  return jobs.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-}
-
 export async function getPerch(id) {
-  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
-  return r.blobs.length ? readBlob(r.blobs[0].url) : null;
+  return getAgentJob("perch", id);
 }
 
 export async function savePerch(job) {
-  job.updatedAt = new Date().toISOString();
-  await put(`${P}${job.id}.json`, JSON.stringify(job), blobOpts);
-  return job;
+  return saveAgentJob("perch", job, PERCH_ACTIVE.includes(job.status));
 }
 
-export async function deletePerch(id) {
-  const r = await list({ prefix: `${P}${id}.json`, limit: 1 });
-  if (r.blobs.length) await del(r.blobs[0].url);
+export async function deletePerch(job) {
+  return deleteAgentJob("perch", job);
 }
 
 const log = (job, msg) => {
@@ -194,15 +169,7 @@ async function step(job) {
   log(job, `Price hit (+${job.movePct.toFixed(2)}%). Selling.`);
 }
 
-export async function tickPerch(deadline) {
-  const started = Date.now();
-  const lockList = await list({ prefix: LOCK, limit: 1 });
-  if (lockList.blobs.length) {
-    const lock = await readBlob(lockList.blobs[0].url).catch(() => null);
-    if (lock?.at && started - lock.at < 55_000) return { skipped: "locked" };
-  }
-  await put(LOCK, JSON.stringify({ at: started }), blobOpts);
-  const jobs = (await listPerch()).filter((j) => PERCH_ACTIVE.includes(j.status));
+export async function tickPerch(jobs = [], deadline = Date.now() + 50_000) {
   const results = [];
   for (const job of jobs) {
     if (Date.now() > deadline) break;
@@ -213,9 +180,8 @@ export async function tickPerch(deadline) {
     } catch (e) {
       job.error = String(e?.shortMessage || e?.message || e).slice(0, 200);
     }
-    if (JSON.stringify(job) !== before) await savePerch(job);
+    await persistAfterStep("perch", job, before, PERCH_ACTIVE.includes(job.status));
     results.push({ id: job.id, status: job.status, error: job.error || undefined });
   }
-  await put(LOCK, JSON.stringify({ at: 0 }), blobOpts);
   return { processed: results.length, results };
 }

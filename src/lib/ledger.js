@@ -1,15 +1,11 @@
-// Public, anonymous totals across every Nextra agent, from a permanent ledger. No wallet addresses are exposed.
-// Totals come from a permanent ledger (agents/stats/ledger.json), so trades stay counted
-// even after a user removes a finished agent from their list.
-import { list, put } from "@vercel/blob";
-import { listJobs } from "./sentry";
-import { listTempo } from "./tempo";
-import { listPerch } from "./perch";
+// Public, anonymous totals across every Nextra agent. Kept as one small ledger in Redis
+// (stats:ledger) that only changes when an agent is created or a trade fills, so removed
+// agents keep counting and the homepage reads a single key. No wallet addresses are stored.
+import { activeCount, redis } from "./store";
 
-const LEDGER = "agents/stats/ledger.json";
-// Totals published before the ledger existed (snapshot at T0); used once to seed it.
-const T0 = "2026-11-18T19:04:50.000Z";
-const SNAPSHOT = { trades: 53, volumeWei: 9161n * 10n ** 12n, agents: 7 };
+const KEY = "stats:ledger";
+// Totals published before the move to Redis; used once to seed the ledger.
+const SEED = { trades: 57, volumeWei: "9361000000000000", agents: 8, traders: 2 };
 
 const big = (v) => {
   try {
@@ -20,123 +16,85 @@ const big = (v) => {
 };
 const eth = (wei) => Number(big(wei) / 10n ** 12n) / 1e6;
 const label = (t) => (t === "NEXTRA" ? "$NEXTRA" : t);
-const isTrade = (m) => /^(Bought|Sold)/.test(m || "");
 
-async function readLedger() {
-  const r = await list({ prefix: LEDGER, limit: 1 });
-  if (!r.blobs.length) return null;
-  const res = await fetch(`${r.blobs[0].url}?t=${Date.now()}`, { cache: "no-store" });
-  return res.ok ? res.json() : null;
+async function read() {
+  const s = await redis("GET", KEY);
+  try {
+    if (s) return JSON.parse(s);
+  } catch {}
+  return { ...SEED, users: [], recent: [], seen: {} };
+}
+const write = (l) => redis("SET", KEY, JSON.stringify(l));
+
+export async function recordAgentCreated(userId) {
+  const l = await read();
+  l.agents = (l.agents || 0) + 1;
+  if (userId && !l.users.includes(userId)) l.users.push(userId);
+  await write(l);
 }
 
-// What the jobs that still exist had contributed by T0 (so the snapshot is not double counted).
-function contributionAtT0(sentry, tempo) {
-  let trades = 0;
-  let wei = 0n;
-  let agents = 0;
-  for (const j of sentry) {
-    if (j.createdAt <= T0) agents++;
-    if (j.buyTx && j.boughtAt && j.boughtAt <= T0) (trades++, (wei += big(j.entryWei || j.amountWei)));
-    if (j.sellTx && j.closedAt && j.closedAt <= T0) (trades++, (wei += big(j.exitWei)));
-  }
-  for (const j of tempo) {
-    if (j.createdAt <= T0) agents++;
-    const k = (j.log || []).filter((l) => isTrade(l.msg) && l.at <= T0).length;
-    trades += k;
-    wei += BigInt(k) * big(j.perOrderWei);
-  }
-  return { trades, wei, agents };
-}
-
-export async function agentStats() {
-  const [sentry, tempo, perch, stored] = await Promise.all([
-    listJobs(),
-    listTempo(),
-    listPerch().catch(() => []),
-    readLedger().catch(() => null),
-  ]);
-
-  const ledger = stored || { v: 1, events: {}, agentIds: [], users: [] };
-  if (!stored) {
-    const c = contributionAtT0(sentry, tempo);
-    const lw = SNAPSHOT.volumeWei - c.wei;
-    ledger.legacy = {
-      trades: Math.max(0, SNAPSHOT.trades - c.trades),
-      volumeWei: (lw > 0n ? lw : 0n).toString(),
-      agents: Math.max(0, SNAPSHOT.agents - c.agents),
-    };
-  }
-  const before = JSON.stringify(ledger);
-  const ev = ledger.events;
-  const agentIds = new Set(ledger.agentIds);
-  const users = new Set(ledger.users);
-  const upsert = (key, e) => {
-    const old = ev[key];
-    if (!old || (e.n || 1) > (old.n || 1) || e.at > old.at) ev[key] = e;
-  };
-
-  for (const j of sentry) {
-    agentIds.add(j.id);
-    if (j.userId) users.add(j.userId);
-    if (j.tokenAmount && j.buyTx)
-      upsert(`s:${j.id}:buy`, { agent: "Sentry", side: "Buy", token: label(j.token), wei: String(j.entryWei || j.amountWei), at: j.boughtAt, tx: j.buyTx });
+// Trade events a job has produced so far: [{ key, n, wei, ...display }]
+function eventsOf(agent, j) {
+  const out = [];
+  if (agent === "sentry") {
+    if (j.tokenAmount && j.buyTx) out.push({ key: `s:${j.id}:b`, n: 1, wei: j.entryWei || j.amountWei, agent: "Sentry", side: "Buy", token: label(j.token), at: j.boughtAt, tx: j.buyTx });
     if (j.status === "closed" && j.sellTx)
-      upsert(`s:${j.id}:sell`, {
+      out.push({
+        key: `s:${j.id}:s`,
+        n: 1,
+        wei: j.exitWei,
         agent: "Sentry",
         side: j.exitReason === "take-profit" ? "Take-profit" : j.exitReason === "stop-loss" ? "Stop-loss" : "Sell",
         token: label(j.token),
-        wei: String(j.exitWei || "0"),
         at: j.closedAt,
         tx: j.sellTx,
       });
-  }
-  for (const j of tempo) {
-    agentIds.add(j.id);
-    if (j.userId) users.add(j.userId);
+  } else if (agent === "tempo") {
     const n = Number(j.orders || 0);
-    if (n > 0) upsert(`t:${j.id}`, { agent: "Tempo", side: j.mode === "TWAP" ? "Sell" : "Buy", token: label(j.token), wei: String(j.filledWei || "0"), n, at: j.updatedAt, tx: j.lastTx });
-  }
-  for (const j of perch) {
-    agentIds.add(j.id);
-    if (j.userId) users.add(j.userId);
+    if (n > 0) out.push({ key: `t:${j.id}`, n, wei: j.filledWei, agent: "Tempo", side: j.mode === "TWAP" ? "Sell" : "Buy", token: label(j.token), at: j.updatedAt || new Date().toISOString(), tx: j.lastTx });
+  } else if (agent === "perch") {
     if (j.status === "filled" && j.fillTx)
-      upsert(`p:${j.id}`, { agent: "Perch", side: j.side === "Buy" ? "Limit buy" : "Limit sell", token: label(j.token), wei: String(j.filledEthWei || "0"), at: j.filledAt, tx: j.fillTx });
+      out.push({ key: `p:${j.id}`, n: 1, wei: j.filledEthWei, agent: "Perch", side: j.side === "Buy" ? "Limit buy" : "Limit sell", token: label(j.token), at: j.filledAt, tx: j.fillTx });
   }
-  ledger.agentIds = [...agentIds];
-  ledger.users = [...users];
+  return out;
+}
 
-  if (JSON.stringify(ledger) !== before) {
-    await put(LEDGER, JSON.stringify(ledger), {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: "application/json",
-      cacheControlMaxAge: 60,
-    }).catch(() => {});
+// Cheap fingerprint of a job's trade progress, so the tick only touches the ledger when it moved.
+export function tradeMark(agent, j) {
+  return eventsOf(agent, j)
+    .map((e) => `${e.key}:${e.n}`)
+    .join("|");
+}
+
+export async function recordTrades(jobsByAgent) {
+  const l = await read();
+  let changed = false;
+  for (const [agent, jobs] of Object.entries(jobsByAgent)) {
+    for (const j of jobs) {
+      for (const e of eventsOf(agent, j)) {
+        const seen = l.seen[e.key] || { n: 0, wei: "0" };
+        if (e.n <= seen.n) continue;
+        l.trades += e.n - seen.n;
+        l.volumeWei = (big(l.volumeWei) + big(e.wei) - big(seen.wei)).toString();
+        l.seen[e.key] = { n: e.n, wei: String(e.wei || "0") };
+        const per = e.n > 1 ? (big(e.wei) - big(seen.wei)) / BigInt(e.n - seen.n) : big(e.wei);
+        l.recent = [{ agent: e.agent, side: e.side, token: e.token, wei: per.toString(), at: e.at, tx: e.tx }, ...(l.recent || [])].slice(0, 12);
+        changed = true;
+      }
+    }
   }
+  if (changed) await write(l);
+}
 
-  let trades = ledger.legacy?.trades || 0;
-  let volume = big(ledger.legacy?.volumeWei);
-  for (const e of Object.values(ev)) {
-    trades += e.n || 1;
-    volume += big(e.wei);
-  }
-  const recent = Object.values(ev)
-    .filter((e) => e.at && e.tx)
-    .sort((a, b) => (a.at < b.at ? 1 : -1))
-    .slice(0, 6)
-    .map((e) => ({ agent: e.agent, side: e.side, token: e.token, eth: e.n ? eth(e.wei) / e.n : eth(e.wei), at: e.at, tx: e.tx }));
-
+export async function agentStats() {
+  const [l, active] = await Promise.all([read(), activeCount().catch(() => 0)]);
   return {
-    trades,
-    volumeEth: eth(volume),
-    agents: (ledger.legacy?.agents || 0) + agentIds.size,
-    active:
-      sentry.filter((j) => ["pending", "buying", "holding", "selling"].includes(j.status)).length +
-      tempo.filter((j) => j.status === "running").length +
-      perch.filter((j) => ["waiting", "filling"].includes(j.status)).length,
-    traders: users.size,
-    recent,
+    trades: l.trades,
+    volumeEth: eth(l.volumeWei),
+    agents: l.agents,
+    active,
+    traders: Math.max(l.traders || 0, l.users?.length || 0),
+    recent: (l.recent || []).slice(0, 6).map((r) => ({ agent: r.agent, side: r.side, token: r.token, eth: eth(r.wei), at: r.at, tx: r.tx })),
     at: new Date().toISOString(),
   };
 }
