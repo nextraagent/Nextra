@@ -1,0 +1,125 @@
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+import { voteMessage } from "../../lib/voteMessage";
+@@@NEW
+import { voteMessage } from "../../lib/voteMessage";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import Providers from "../agents/Providers";
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+export function VoteBox({ candidates: initial }) {
+@@@NEW
+// Voting works with any wallet Privy can reach: the Nextra wallet (email / Google / X login)
+// or an external wallet (MetaMask, Robinhood Wallet…) connected through Privy.
+export function VoteBox(props) {
+  return (
+    <Providers>
+      <VoteInner {...props} />
+    </Providers>
+  );
+}
+
+const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+function VoteInner({ candidates: initial }) {
+  const { ready, authenticated, login, connectWallet } = usePrivy();
+  const { wallets } = useWallets();
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+  async function connect() {
+    setMsg("");
+    const eth = typeof window !== "undefined" ? window.ethereum : null;
+    if (!eth) {
+      setMsg("No wallet found. Open this page in your wallet's browser (Robinhood Wallet, MetaMask, Trust…).");
+      return null;
+    }
+    try {
+      const [a] = await eth.request({ method: "eth_requestAccounts" });
+      setAddr(a);
+      return a;
+    } catch {
+      setMsg("Wallet connection was cancelled.");
+      return null;
+    }
+  }
+@@@NEW
+  // default to the Nextra (embedded) wallet; let the user switch if they hold $NEXTRA elsewhere
+  useEffect(() => {
+    if (!wallets.length) return setAddr(null);
+    if (addr && wallets.some((w) => w.address.toLowerCase() === addr.toLowerCase())) return;
+    const w = wallets.find((x) => x.walletClientType === "privy") || wallets[0];
+    setAddr(w.address);
+  }, [wallets, addr]);
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+    if (!pick || !live) return;
+@@@NEW
+    if (!pick || !live) return;
+    if (!authenticated) return login();
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+      const a = addr || (await connect());
+      if (!a) return;
+@@@NEW
+      const w = wallets.find((x) => x.address.toLowerCase() === (addr || "").toLowerCase());
+      if (!w) throw new Error("Wallet is still loading. Try again in a moment.");
+      const a = w.address;
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+      const signature = await window.ethereum.request({ method: "personal_sign", params: [toHex(voteMessage(round, a, pick)), a] });
+@@@NEW
+      const provider = await w.getEthereumProvider();
+      const signature = await provider.request({ method: "personal_sign", params: [toHex(voteMessage(round, a, pick)), a] });
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+          <button type="button" className="btn lime" onClick={vote} disabled={!pick || busy}>
+            {busy ? "Signing…" : pick ? `Vote ${pick}` : "Pick a stock"}
+@@@NEW
+          <button type="button" className="btn lime" onClick={vote} disabled={!ready || busy || (authenticated && !pick)}>
+            {busy ? "Signing…" : !authenticated ? "Log in to vote" : pick ? `Vote ${pick}` : "Pick a stock"}
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+          {addr ? <span className="vd-fine">Wallet {addr.slice(0, 6)}…{addr.slice(-4)}</span> : null}
+@@@NEW
+          {authenticated && wallets.length > 1 ? (
+            <label className="vd-wallet">
+              Vote with
+              <select value={addr || ""} onChange={(e) => setAddr(e.target.value)}>
+                {wallets.map((w) => (
+                  <option key={w.address} value={w.address}>
+                    {w.walletClientType === "privy" ? "Nextra wallet" : w.walletClientType} · {short(w.address)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : authenticated && addr ? (
+            <span className="vd-fine">Wallet {short(addr)}</span>
+          ) : null}
+          {authenticated ? (
+            <button type="button" className="vd-link" onClick={() => connectWallet()}>
+              Use another wallet
+            </button>
+          ) : null}
+@@@END
+@@@FILE src/app/vault/DropClient.jsx
+@@@OLD
+          ? "1 wallet = 1 vote. You need 1,000,000+ $NEXTRA. Signing is free — no transaction."
+@@@NEW
+          ? "1 wallet = 1 vote. You need 1,000,000+ $NEXTRA in the wallet you vote with. Signing is free — no transaction."
+@@@END
+@@@FILE src/app/vault/vault-new.css
+@@@OLD
+@media (max-width: 560px) { .vd-preview { grid-template-columns: 1fr 1fr; } }
+@@@NEW
+@media (max-width: 560px) { .vd-preview { grid-template-columns: 1fr 1fr; } }
+.vd-wallet { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: #5f5b51; }
+.vd-wallet select { min-height: 40px; border-radius: 10px; border: 1px solid #e2daca; background: #fbf8f1; padding: 0 10px; font: 600 14px Inter, sans-serif; color: #161613; }
+.vd-link { border: 0; background: none; padding: 8px 0; min-height: 40px; font: 600 14px Inter, sans-serif; color: #3d6a00; text-decoration: underline; cursor: pointer; }
+@@@END

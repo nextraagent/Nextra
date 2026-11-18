@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 
 const re = /@@@FILE (.+)\n@@@OLD\n([\s\S]*?)@@@NEW\n([\s\S]*?)@@@END\n/g;
 let n = 0;
-for (const P of ["scripts/patches.txt", "scripts/patches2.txt"]) {
+for (const P of ["scripts/patches.txt", "scripts/patches2.txt", "scripts/patches3.txt"]) {
   if (!existsSync(P)) continue;
   const txt = readFileSync(P, "utf8");
   let m;

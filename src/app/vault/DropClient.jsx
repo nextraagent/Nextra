@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { nextDrop } from "../../lib/rounds";
 import { voteMessage } from "../../lib/voteMessage";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import Providers from "../agents/Providers";
 
 const SHARE = 0.1; // 10% of creator fees
 const MIN = 1_000_000;
@@ -108,7 +110,21 @@ function toHex(str) {
   return "0x" + Array.from(new TextEncoder().encode(str), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function VoteBox({ candidates: initial }) {
+// Voting works with any wallet Privy can reach: the Nextra wallet (email / Google / X login)
+// or an external wallet (MetaMask, Robinhood Wallet…) connected through Privy.
+export function VoteBox(props) {
+  return (
+    <Providers>
+      <VoteInner {...props} />
+    </Providers>
+  );
+}
+
+const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+function VoteInner({ candidates: initial }) {
+  const { ready, authenticated, login, connectWallet } = usePrivy();
+  const { wallets } = useWallets();
   const [data, setData] = useState(null);
   const [addr, setAddr] = useState(null);
   const [pick, setPick] = useState(null);
@@ -130,32 +146,26 @@ export function VoteBox({ candidates: initial }) {
   const total = data?.open?.total || 0;
   const max = Math.max(1, ...Object.values(counts));
 
-  async function connect() {
-    setMsg("");
-    const eth = typeof window !== "undefined" ? window.ethereum : null;
-    if (!eth) {
-      setMsg("No wallet found. Open this page in your wallet's browser (Robinhood Wallet, MetaMask, Trust…).");
-      return null;
-    }
-    try {
-      const [a] = await eth.request({ method: "eth_requestAccounts" });
-      setAddr(a);
-      return a;
-    } catch {
-      setMsg("Wallet connection was cancelled.");
-      return null;
-    }
-  }
+  // default to the Nextra (embedded) wallet; let the user switch if they hold $NEXTRA elsewhere
+  useEffect(() => {
+    if (!wallets.length) return setAddr(null);
+    if (addr && wallets.some((w) => w.address.toLowerCase() === addr.toLowerCase())) return;
+    const w = wallets.find((x) => x.walletClientType === "privy") || wallets[0];
+    setAddr(w.address);
+  }, [wallets, addr]);
 
   async function vote() {
     if (!pick || !live) return;
+    if (!authenticated) return login();
     setBusy(true);
     setMsg("");
     try {
-      const a = addr || (await connect());
-      if (!a) return;
+      const w = wallets.find((x) => x.address.toLowerCase() === (addr || "").toLowerCase());
+      if (!w) throw new Error("Wallet is still loading. Try again in a moment.");
+      const a = w.address;
       const round = data.open.round;
-      const signature = await window.ethereum.request({ method: "personal_sign", params: [toHex(voteMessage(round, a, pick)), a] });
+      const provider = await w.getEthereumProvider();
+      const signature = await provider.request({ method: "personal_sign", params: [toHex(voteMessage(round, a, pick)), a] });
       const res = await fetch("/api/vote", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -208,15 +218,33 @@ export function VoteBox({ candidates: initial }) {
       </div>
       {live ? (
         <div className="vd-vote-act">
-          <button type="button" className="btn lime" onClick={vote} disabled={!pick || busy}>
-            {busy ? "Signing…" : pick ? `Vote ${pick}` : "Pick a stock"}
+          <button type="button" className="btn lime" onClick={vote} disabled={!ready || busy || (authenticated && !pick)}>
+            {busy ? "Signing…" : !authenticated ? "Log in to vote" : pick ? `Vote ${pick}` : "Pick a stock"}
           </button>
-          {addr ? <span className="vd-fine">Wallet {addr.slice(0, 6)}…{addr.slice(-4)}</span> : null}
+          {authenticated && wallets.length > 1 ? (
+            <label className="vd-wallet">
+              Vote with
+              <select value={addr || ""} onChange={(e) => setAddr(e.target.value)}>
+                {wallets.map((w) => (
+                  <option key={w.address} value={w.address}>
+                    {w.walletClientType === "privy" ? "Nextra wallet" : w.walletClientType} · {short(w.address)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : authenticated && addr ? (
+            <span className="vd-fine">Wallet {short(addr)}</span>
+          ) : null}
+          {authenticated ? (
+            <button type="button" className="vd-link" onClick={() => connectWallet()}>
+              Use another wallet
+            </button>
+          ) : null}
         </div>
       ) : null}
       <p className="vd-fine">
         {live
-          ? "1 wallet = 1 vote. You need 1,000,000+ $NEXTRA. Signing is free — no transaction."
+          ? "1 wallet = 1 vote. You need 1,000,000+ $NEXTRA in the wallet you vote with. Signing is free — no transaction."
           : "Voting opens at launch. 1 wallet = 1 vote, 1,000,000+ $NEXTRA to vote."}
       </p>
       {msg ? (
