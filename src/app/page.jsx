@@ -4,6 +4,7 @@ import AgentIcon from "./AgentIcon";
 import Footer from "./Footer";
 import Logo3D from "./Logo3D";
 import TokenCard from "./TokenCard";
+import AgentStats from "./AgentStats";
 import "./home-new.css";
 
 const AGENTS = [
@@ -206,6 +207,7 @@ export default function Home() {
       <Nav />
       <main className="wrap">
         <Hero />
+        <AgentStats />
         <Agents />
         <VaultBand />
         <Roadmap />
