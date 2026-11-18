@@ -1,0 +1,467 @@
+@@@FILE src/app/TokenCard.jsx
+@@@OLD
+      </div>
+    </section>
+@@@NEW
+      </div>
+      <a className="tc-trade" href="/agents?token=NEXTRA">
+        <span>
+          <b>Trade with Sentry</b>
+          <small>Buy now, auto-exit at your take-profit or stop-loss</small>
+        </span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 12h14M13 6l6 6-6 6" />
+        </svg>
+      </a>
+    </section>
+@@@END
+@@@FILE src/app/TokenLogo.jsx
+@@@OLD
+  const domain = DOMAINS[symbol];
+  const style = { width: size, height: size, flex: `0 0 ${size}px`, fontSize: Math.round(size * 0.34) };
+@@@NEW
+  const domain = DOMAINS[symbol];
+  if (symbol === "NEXTRA")
+    return (
+      <span className="tk-logo" style={{ width: size, height: size, flex: `0 0 ${size}px`, display: "inline-grid", placeItems: "center", background: "#161613", borderRadius: "50%" }}>
+        <svg width={Math.round(size * 0.62)} height={Math.round(size * 0.62)} viewBox="0 0 64 64" aria-label="$NEXTRA logo">
+          <rect x="7" y="7" width="31" height="31" rx="9" fill="none" stroke="#f4efe4" strokeWidth="7" />
+          <rect x="26" y="26" width="31" height="31" rx="9" fill="none" stroke="#8ad11a" strokeWidth="7" />
+        </svg>
+      </span>
+    );
+  const style = { width: size, height: size, flex: `0 0 ${size}px`, fontSize: Math.round(size * 0.34) };
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+import { SENTRY_TOKENS } from "../../lib/stocks";
+import { robinhoodChain } from "./Providers";
+@@@NEW
+import { SENTRY_TOKENS } from "../../lib/stocks";
+
+const SENTRY_OPTIONS = ["NEXTRA", ...SENTRY_TOKENS];
+import { robinhoodChain } from "./Providers";
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+    case "sentry":
+      return `Buy ${c.amount} ETH of ${c.token}. Sell everything at +${c.tp}% profit or −${c.sl}% loss${
+        c.trailing ? ", with a trailing stop that follows the price up" : ""
+@@@NEW
+    case "sentry":
+      return `Buy ${c.amount} ETH of ${c.token === "NEXTRA" ? "$NEXTRA" : c.token}. Sell everything at +${c.tp}% profit or −${c.sl}% loss${
+        c.trailing ? ", with a trailing stop that follows the price up" : ""
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+    <>
+      <Field label="Stock token">
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_TOKENS} logo />
+      </Field>
+@@@NEW
+    <>
+      <Field label="Token" hint={c.token === "NEXTRA" ? "Trades on the Pons curve. Early buys may pay Pons' snipe tax." : undefined}>
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_OPTIONS} logo />
+      </Field>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+          <TokenLogo symbol={j.token} size={30} />
+          Sentry · {j.token}
+        </strong>
+@@@NEW
+          <TokenLogo symbol={j.token} size={30} />
+          Sentry · {j.token === "NEXTRA" ? "$NEXTRA" : j.token}
+        </strong>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      <p className="sub">
+        {j.amount} ETH of {j.token}. Exit at +{j.tp}% or −{j.sl}%{j.trailing ? " (trailing)" : ""}.
+      </p>
+@@@NEW
+      <p className="sub">
+        {j.amount} ETH of {j.token === "NEXTRA" ? "$NEXTRA" : j.token}
+        {j.venue === "pons" ? " on Pons" : ""}. Exit at +{j.tp}% or −{j.sl}%{j.trailing ? " (trailing)" : ""}.
+      </p>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+  const [busy, setBusy] = useState(false);
+
+@@@NEW
+  const [busy, setBusy] = useState(false);
+
+  // deep link from the homepage token card: /agents?token=NEXTRA
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("token")?.toUpperCase();
+    if (t && SENTRY_OPTIONS.includes(t)) {
+      setActive("sentry");
+      setConfigs((c) => ({ ...c, sentry: { ...c.sentry, token: t } }));
+    }
+  }, []);
+
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+import { stockAddress } from "../../../lib/stocks";
+
+@@@NEW
+import { stockAddress } from "../../../lib/stocks";
+import { curveFor } from "../../../lib/pons";
+import { NEXTRA } from "../../../lib/nextra";
+
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const token = String(b.token || "").toUpperCase();
+  const tokenAddress = stockAddress(token);
+  const amount = Number(b.amount);
+@@@NEW
+  const token = String(b.token || "").toUpperCase();
+  const tokenAddress = token === "NEXTRA" ? NEXTRA : stockAddress(token);
+  const curve = token === "NEXTRA" ? curveFor(NEXTRA) : null;
+  const amount = Number(b.amount);
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const sl = Number(b.sl);
+  if (!tokenAddress) return err("Pick a supported stock token.");
+  if (!(amount > 0) || amount > 100) return err("Buy amount must be between 0 and 100 ETH.");
+@@@NEW
+  const sl = Number(b.sl);
+  if (!tokenAddress) return err("Pick a supported token.");
+  if (!(amount > 0) || amount > 100) return err("Buy amount must be between 0 and 100 ETH.");
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+    tokenAddress,
+    amount: String(amount),
+@@@NEW
+    tokenAddress,
+    curve,
+    venue: curve ? "pons" : "uniswap",
+    amount: String(amount),
+@@@END
+@@@FILE src/app/api/portfolio/route.js
+@@@OLD
+import { SENTRY_TOKENS, stockAddress } from "../../../lib/stocks";
+
+@@@NEW
+import { SENTRY_TOKENS, stockAddress } from "../../../lib/stocks";
+import { NEXTRA } from "../../../lib/nextra";
+import { curveFor, quoteSell } from "../../../lib/pons";
+
+@@@END
+@@@FILE src/app/api/portfolio/route.js
+@@@OLD
+
+// Public read-only view of a wallet: ETH plus Robinhood stock tokens, valued in ETH via Uniswap quotes.
+export async function GET(req) {
+@@@NEW
+
+// Public read-only view of a wallet: ETH, $NEXTRA (valued on the Pons curve) and stock tokens (valued via Uniswap).
+export async function GET(req) {
+@@@END
+@@@FILE src/app/api/portfolio/route.js
+@@@OLD
+    const tokens = await Promise.all(
+      SENTRY_TOKENS.map(async (symbol) => {
+        const token = stockAddress(symbol);
+        const balance = await tokenBalance(token, address).catch(() => 0n);
+@@@NEW
+    const tokens = await Promise.all(
+      ["NEXTRA", ...SENTRY_TOKENS].map(async (symbol) => {
+        const token = symbol === "NEXTRA" ? NEXTRA : stockAddress(symbol);
+        const balance = await tokenBalance(token, address).catch(() => 0n);
+@@@END
+@@@FILE src/app/api/portfolio/route.js
+@@@OLD
+        if (balance > 0n) {
+          const r = await bestRoute(token, weth, balance).catch(() => null);
+          valueWei = r?.amountOut ?? null;
+        }
+@@@NEW
+        if (balance > 0n) {
+          const curve = curveFor(token);
+          if (curve) valueWei = await quoteSell(curve, balance).catch(() => null);
+          else valueWei = (await bestRoute(token, weth, balance).catch(() => null))?.amountOut ?? null;
+        }
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+              settings={[
+                ["Stock token", "The Robinhood stock token to buy (NVDA, TSLA, AAPL and more). Swapped on Uniswap."],
+                ["Buy amount", "How much ETH to spend."],
+@@@NEW
+              settings={[
+                ["Token", "$NEXTRA (bought and sold on its Pons bonding curve) or a Robinhood stock token like NVDA, TSLA or AAPL (swapped on Uniswap)."],
+                ["Buy amount", "How much ETH to spend."],
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+  { status: "Live", title: "Vault dashboard", text: "Public page that reads the Vault straight from Robinhood Chain." },
+  { status: "Live", title: "Sentry", text: "TP/SL agent: buys on Uniswap and exits for you, from your own wallet." },
+  { status: "Building", title: "Perch", text: "Limit orders on the same price-watching engine." },
+@@@NEW
+  { status: "Live", title: "Vault dashboard", text: "Public page that reads the Vault straight from Robinhood Chain." },
+  { status: "Live", title: "Sentry", text: "TP/SL agent for $NEXTRA (Pons curve) and stock tokens (Uniswap). Exits for you, from your own wallet." },
+  { status: "Building", title: "Perch", text: "Limit orders on the same price-watching engine." },
+@@@END
+@@@FILE src/app/portfolio/PortfolioClient.jsx
+@@@OLD
+        <h1 className="ag-title">Your wallet, in one place.</h1>
+        <p className="lead">Log in to see your ETH and stock tokens, send funds, or export your key.</p>
+        <button type="button" className="btn primary" onClick={login}>
+@@@NEW
+        <h1 className="ag-title">Your wallet, in one place.</h1>
+        <p className="lead">Log in to see your ETH, $NEXTRA and stock tokens, send funds, or export your key.</p>
+        <button type="button" className="btn primary" onClick={login}>
+@@@END
+@@@FILE src/app/portfolio/PortfolioClient.jsx
+@@@OLD
+          <span className="pf-sub">
+            ETH + stock tokens, valued at Uniswap prices{loading ? " · updating…" : ""}
+          </span>
+@@@NEW
+          <span className="pf-sub">
+            ETH, $NEXTRA and stock tokens at live prices{loading ? " · updating…" : ""}
+          </span>
+@@@END
+@@@FILE src/app/portfolio/PortfolioClient.jsx
+@@@OLD
+              <div className="pf-name">
+                <strong>{t.symbol}</strong>
+                <a href={`${EXPLORER}/token/${t.address}`} target="_blank" rel="noopener noreferrer">
+                  Stock token ↗
+                </a>
+@@@NEW
+              <div className="pf-name">
+                <strong>{t.symbol === "NEXTRA" ? "$NEXTRA" : t.symbol}</strong>
+                <a href={`${EXPLORER}/token/${t.address}`} target="_blank" rel="noopener noreferrer">
+                  {t.symbol === "NEXTRA" ? "Nextra token ↗" : "Stock token ↗"}
+                </a>
+@@@END
+@@@FILE src/app/token-card.css
+@@@OLD
+
+@media (max-width: 420px) {
+@@@NEW
+
+.tc-trade { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 14px; min-height: 56px; border-radius: 14px; border: 1px solid #34342e; color: #f4efe4; text-decoration: none; transition: border-color .15s, background .15s; }
+.tc-trade:hover { border-color: #8ad11a; background: rgba(138,209,26,.06); }
+.tc-trade span { display: flex; flex-direction: column; gap: 2px; }
+.tc-trade b { font: 700 15px Inter, sans-serif; }
+.tc-trade small { font-size: 12px; color: #9a9585; }
+.tc-trade svg { color: #8ad11a; flex: 0 0 auto; }
+
+@media (max-width: 420px) {
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+import { del, list, put } from "@vercel/blob";
+import { publicClient } from "./chain";
+@@@NEW
+import { del, list, put } from "@vercel/blob";
+import { toEventSelector } from "viem";
+import { publicClient } from "./chain";
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+  quote,
+  sellCall,
+@@@NEW
+  quote,
+  ROUTER,
+  sellCall,
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+} from "./swap";
+
+@@@NEW
+} from "./swap";
+import { ponsBuyCall, ponsSellCall, quoteBuy, quoteSell } from "./pons";
+
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+const SLIPPAGE_BPS = Number(process.env.SENTRY_SLIPPAGE_BPS || 150);
+
+@@@NEW
+const SLIPPAGE_BPS = Number(process.env.SENTRY_SLIPPAGE_BPS || 150);
+// memecoin curves move faster than stock pools, so Pons trades get a wider default
+const PONS_SLIPPAGE_BPS = Number(process.env.SENTRY_PONS_SLIPPAGE_BPS || 300);
+
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+
+const bps = (pct) => BigInt(Math.round(Number(pct) * 100));
+@@@NEW
+
+const spender = (job) => job.curve || ROUTER;
+
+// ETH actually spent by a buy: value sent minus any CurveBuyRefunded refund
+const REFUNDED = toEventSelector("event CurveBuyRefunded(address indexed buyer, uint256 refund)");
+async function paidEth(rc, wallet) {
+  try {
+    const tx = await publicClient.getTransaction({ hash: rc.transactionHash });
+    let refund = 0n;
+    for (const l of rc.logs) {
+      if (l.topics?.[0] === REFUNDED && l.topics?.[1]?.toLowerCase().endsWith(wallet.slice(2).toLowerCase())) refund += BigInt(l.data);
+    }
+    return tx.value - refund;
+  } catch {
+    return null;
+  }
+}
+
+const bps = (pct) => BigInt(Math.round(Number(pct) * 100));
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+    }
+    const route = await bestRoute(weth, job.tokenAddress, amountIn);
+    if (!route) {
+      job.note = "No Uniswap route for this token right now. Retrying.";
+      return;
+    }
+    job.balBefore = (await tokenBalance(job.tokenAddress, wallet)).toString();
+    const tx = buyCall({ route, amountIn, recipient: wallet, slippageBps: SLIPPAGE_BPS });
+    job.buyTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...tx });
+    job.route = { tokens: [...route.tokens].reverse(), fees: [...route.fees].reverse() };
+    job.status = "buying";
+@@@NEW
+    }
+    let tx;
+    if (job.curve) {
+      const q = await quoteBuy(job.curve, amountIn, wallet);
+      if (!q) {
+        job.note = "The Pons curve is closed or too thin right now. Retrying.";
+        return;
+      }
+      tx = ponsBuyCall({ curve: job.curve, quoteIn: amountIn, q, recipient: wallet, slippageBps: PONS_SLIPPAGE_BPS });
+    } else {
+      const route = await bestRoute(weth, job.tokenAddress, amountIn);
+      if (!route) {
+        job.note = "No Uniswap route for this token right now. Retrying.";
+        return;
+      }
+      tx = buyCall({ route, amountIn, recipient: wallet, slippageBps: SLIPPAGE_BPS });
+      job.route = { tokens: [...route.tokens].reverse(), fees: [...route.fees].reverse() };
+    }
+    job.balBefore = (await tokenBalance(job.tokenAddress, wallet)).toString();
+    job.buyTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...tx });
+    job.status = "buying";
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+    const got = after - BigInt(job.balBefore || "0");
+    if (got <= 0n) {
+@@@NEW
+    const got = after - BigInt(job.balBefore || "0");
+    // a buy that fills the curve refunds unspent ETH, so value the entry at what was really paid
+    if (job.curve) {
+      const paid = await paidEth(rc, wallet);
+      if (paid && paid < BigInt(job.amountWei)) job.amountWei = paid.toString();
+    }
+    if (got <= 0n) {
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+    try {
+      job.approveTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...approveCall(job.tokenAddress, got) });
+    } catch (e) {
+@@@NEW
+    try {
+      job.approveTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...approveCall(job.tokenAddress, got, spender(job)) });
+    } catch (e) {
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+    const amount = BigInt(job.tokenAmount);
+    const value = await quote(job.route.tokens, job.route.fees, amount);
+    if (value) {
+@@@NEW
+    const amount = BigInt(job.tokenAmount);
+    const value = job.curve ? await quoteSell(job.curve, amount).catch(() => null) : await quote(job.route.tokens, job.route.fees, amount);
+    if (value) {
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+
+    const allowance = await tokenAllowance(job.tokenAddress, wallet);
+    if (allowance < amount) {
+      if (job.approveTx && !(await receipt(job.approveTx))) return; // approval still pending
+      job.approveTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...approveCall(job.tokenAddress, amount) });
+      job.note = "Approving sale…";
+@@@NEW
+
+    const allowance = await tokenAllowance(job.tokenAddress, wallet, spender(job));
+    if (allowance < amount) {
+      if (job.approveTx && !(await receipt(job.approveTx))) return; // approval still pending
+      job.approveTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...approveCall(job.tokenAddress, amount, spender(job)) });
+      job.note = "Approving sale…";
+@@@END
+@@@FILE src/lib/sentry.js
+@@@OLD
+    }
+    const route = await bestRoute(job.tokenAddress, weth, amount);
+    if (!route) {
+      job.note = "No route to sell right now. Retrying.";
+      return;
+    }
+    const tx = sellCall({ route, amountIn: amount, recipient: wallet, slippageBps: reason === "stop-loss" ? SLIPPAGE_BPS * 2 : SLIPPAGE_BPS });
+    job.sellTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...tx });
+    job.exitQuoteWei = route.amountOut.toString();
+    job.exitReason = reason;
+@@@NEW
+    }
+    const base = job.curve ? PONS_SLIPPAGE_BPS : SLIPPAGE_BPS;
+    const slip = reason === "stop-loss" ? base * 2 : base;
+    let tx, out;
+    if (job.curve) {
+      out = await quoteSell(job.curve, amount);
+      if (!out) {
+        job.note = "The Pons curve is closed (graduating). Sell from your wallet on Pons.";
+        return;
+      }
+      tx = ponsSellCall({ curve: job.curve, tokensIn: amount, quoteOut: out, recipient: wallet, slippageBps: slip });
+    } else {
+      const route = await bestRoute(job.tokenAddress, weth, amount);
+      if (!route) {
+        job.note = "No route to sell right now. Retrying.";
+        return;
+      }
+      out = route.amountOut;
+      tx = sellCall({ route, amountIn: amount, recipient: wallet, slippageBps: slip });
+    }
+    job.sellTx = await sendFromWallet({ walletId: job.walletId, from: wallet, ...tx });
+    job.exitQuoteWei = out.toString();
+    job.exitReason = reason;
+@@@END
+@@@FILE src/lib/swap.js
+@@@OLD
+
+export function approveCall(token, amount) {
+  return { to: token, value: 0n, data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [ROUTER, amount] }) };
+}
+@@@NEW
+
+export function approveCall(token, amount, spender = ROUTER) {
+  return { to: token, value: 0n, data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [spender, amount] }) };
+}
+@@@END
+@@@FILE src/lib/swap.js
+@@@OLD
+export const tokenBalance = (token, owner) => publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
+export const tokenAllowance = (token, owner) =>
+  publicClient.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [owner, ROUTER] });
+
+@@@NEW
+export const tokenBalance = (token, owner) => publicClient.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [owner] });
+export const tokenAllowance = (token, owner, spender = ROUTER) =>
+  publicClient.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [owner, spender] });
+
+@@@END
