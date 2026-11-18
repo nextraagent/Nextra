@@ -1,6 +1,7 @@
 // Public, anonymous totals across every Sentry and Tempo agent. No wallet addresses are exposed.
 import { listJobs } from "./sentry";
 import { listTempo } from "./tempo";
+import { listPerch } from "./perch";
 
 const big = (v) => {
   try {
@@ -13,7 +14,7 @@ const eth = (wei) => Number(wei / 10n ** 12n) / 1e6;
 const label = (t) => (t === "NEXTRA" ? "$NEXTRA" : t);
 
 export async function agentStats() {
-  const [sentry, tempo] = await Promise.all([listJobs(), listTempo()]);
+  const [sentry, tempo, perch] = await Promise.all([listJobs(), listTempo(), listPerch().catch(() => [])]);
   let trades = 0;
   let volume = 0n;
   const users = new Set();
@@ -41,12 +42,23 @@ export async function agentStats() {
       if (j.lastTx) recent.push({ agent: "Tempo", side: j.mode === "TWAP" ? "Sell" : "Buy", token: label(j.token), eth: eth(big(j.filledWei)) / n, at: j.updatedAt, tx: j.lastTx });
     }
   }
-  const all = [...sentry, ...tempo];
+  for (const j of perch) {
+    if (j.userId) users.add(j.userId);
+    if (j.status === "filled" && j.fillTx) {
+      trades++;
+      volume += big(j.filledEthWei);
+      recent.push({ agent: "Perch", side: j.side === "Buy" ? "Limit buy" : "Limit sell", token: label(j.token), eth: eth(big(j.filledEthWei)), at: j.filledAt, tx: j.fillTx });
+    }
+  }
+  const all = [...sentry, ...tempo, ...perch];
   return {
     trades,
     volumeEth: eth(volume),
     agents: all.length,
-    active: sentry.filter((j) => ["pending", "buying", "holding", "selling"].includes(j.status)).length + tempo.filter((j) => j.status === "running").length,
+    active:
+      sentry.filter((j) => ["pending", "buying", "holding", "selling"].includes(j.status)).length +
+      tempo.filter((j) => j.status === "running").length +
+      perch.filter((j) => ["waiting", "filling"].includes(j.status)).length,
     traders: users.size,
     recent: recent.filter((r) => r.at).sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 6),
     at: new Date().toISOString(),

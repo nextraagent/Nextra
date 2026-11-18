@@ -1,0 +1,357 @@
+@@@FILE src/app/AgentStats.jsx
+@@@OLD
+        <span className="as-sub">Live totals from every Sentry and Tempo agent, on-chain.</span>
+@@@NEW
+        <span className="as-sub">Live totals from every Nextra agent, on-chain.</span>
+@@@END
+@@@FILE src/app/agent-stats.css
+@@@OLD
+.as-tag.tempo { background: rgba(255,178,122,.14); color: #ffb27a; }
+@@@NEW
+.as-tag.tempo { background: rgba(255,178,122,.14); color: #ffb27a; }
+.as-tag.perch { background: rgba(140,190,255,.14); color: #9cc6ff; }
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+    defaults: { side: "Buy", token: "NVDA", offset: "5", budget: "0.25", expiry: "24h", slippage: "1" },
+@@@NEW
+    defaults: { side: "Buy", token: "NEXTRA", offset: "10", budget: "0.01", expiry: "24h", slippage: "3" },
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      return `${c.side} ${c.token} with ${c.budget} ETH when the price is ${c.offset}% ${
+        c.side === "Buy" ? "below" : "above"
+      } today's market. Max slippage ${c.slippage}%. Cancels after ${c.expiry}.`;
+@@@NEW
+      return `${c.side === "Buy" ? `Buy ${c.budget} ETH of` : `Sell ${c.budget} ETH worth of`} ${c.token === "NEXTRA" ? "$NEXTRA" : c.token} when the price is ${
+        c.offset
+      }% ${c.side === "Buy" ? "below" : "above"} the price right now. Max slippage ${c.slippage}%. Cancels after ${c.expiry}.`;
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+      <Field label="Token">
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} />
+@@@NEW
+      <Field label="Token" hint={c.token === "NEXTRA" ? "Trades on the Pons curve." : undefined}>
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_OPTIONS} logo />
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+        <Field label="Budget">
+@@@NEW
+        <Field label={c.side === "Buy" ? "Spend" : "Sell (ETH value)"} hint={c.side === "Sell" ? "Tokens you hold, worth this much now." : undefined}>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+const LIVE = ["sentry", "tempo"];
+@@@NEW
+function PerchJob({ j, act, busy }) {
+  const live = ["waiting", "filling"].includes(j.status);
+  const label = j.token === "NEXTRA" ? "$NEXTRA" : j.token;
+  const target = j.side === "Buy" ? -j.offset : j.offset;
+  const move = Number(j.movePct || 0);
+  const progress = Math.max(0, Math.min(1, target ? move / target : 0));
+  const left = j.expiresAt - Date.now();
+  const leftTxt = left <= 0 ? "expired" : left < 3600e3 ? `${Math.ceil(left / 60e3)}m` : left < 86400e3 ? `${Math.round(left / 3600e3)}h` : `${Math.round(left / 86400e3)}d`;
+  const chip = j.paused ? "Paused" : { waiting: "Watching", filling: "Filling", filled: "Filled", expired: "Expired", cancelled: "Cancelled", failed: "Failed" }[j.status] || j.status;
+  return (
+    <li className="card ag-job">
+      <div className="ag-li-top">
+        <strong className="ag-job-title">
+          <TokenLogo symbol={j.token} size={30} />
+          Perch · {j.side === "Buy" ? "Limit buy" : "Limit sell"} {label}
+        </strong>
+        <span className={`chip${live && !j.paused ? " live" : ""}`}>{chip}</span>
+      </div>
+      <p className="sub">
+        {j.side === "Buy" ? `Buy ${j.budget} ETH of ${label}` : `Sell ${j.budget} ETH worth of ${label}`}
+        {j.venue === "pons" ? " on Pons" : ""} at {target > 0 ? "+" : ""}
+        {target}% from the price when created.
+      </p>
+      <div className="ag-job-nums">
+        <div>
+          <span>Target</span>
+          <b>{`${target > 0 ? "+" : ""}${target}%`}</b>
+        </div>
+        <div>
+          <span>Now</span>
+          <b className={move >= 0 ? "up" : "down"}>{`${move > 0 ? "+" : ""}${move.toFixed(2)}%`}</b>
+        </div>
+        <div>
+          <span>{j.status === "filled" ? "Filled" : "Expires"}</span>
+          <b>{j.status === "filled" ? `${fmtEth(j.filledEthWei)} ETH` : live ? leftTxt : "–"}</b>
+        </div>
+      </div>
+      {live ? (
+        <div className="ag-prog" aria-hidden="true">
+          <i style={{ width: `${progress * 100}%` }} />
+        </div>
+      ) : null}
+      {j.note || j.error ? <p className="ag-job-note">{j.note || j.error}</p> : null}
+      <div className="ag-job-links">
+        {j.fillTx ? (
+          <a href={`${EXPLORER}/tx/${j.fillTx}`} target="_blank" rel="noopener noreferrer">
+            Fill tx ↗
+          </a>
+        ) : null}
+        {j.pending?.hash ? (
+          <a href={`${EXPLORER}/tx/${j.pending.hash}`} target="_blank" rel="noopener noreferrer">
+            Pending tx ↗
+          </a>
+        ) : null}
+      </div>
+      <div className="ag-li-act">
+        {j.status === "waiting" ? (
+          <>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, j.paused ? "resume" : "pause")}>
+              {j.paused ? "Resume" : "Pause"}
+            </button>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "close")}>
+              Cancel
+            </button>
+          </>
+        ) : !live ? (
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "delete")}>
+            Remove
+          </button>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+const LIVE = ["sentry", "tempo", "perch"];
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+          : `Tempo is live. First ${c.mode === "DCA" ? "buy" : "sell"} within about a minute.`,
+@@@NEW
+          : active === "perch"
+            ? `Perch is watching. It ${c.side === "Buy" ? "buys" : "sells"} when the price moves ${c.offset}%.`
+            : `Tempo is live. First ${c.mode === "DCA" ? "buy" : "sell"} within about a minute.`,
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+          <span className="chip">Sentry + Tempo live</span>
+          <span>Sentry and Tempo trade for real from your wallet, including $NEXTRA. Perch and Echo are in preview — set them up now, they start later.</span>
+@@@NEW
+          <span className="chip">Sentry · Tempo · Perch live</span>
+          <span>Sentry, Tempo and Perch trade for real from your wallet, including $NEXTRA. Echo is in preview — set it up now, it starts later.</span>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+          <p className="sub">Nothing yet. Start Sentry or Tempo above and it will show here.</p>
+@@@NEW
+          <p className="sub">Nothing yet. Start Sentry, Tempo or Perch above and it will show here.</p>
+@@@END
+@@@FILE src/app/agents/AgentConsole.jsx
+@@@OLD
+              j.agent === "tempo" ? <TempoJob key={j.id} j={j} act={act} busy={busy} /> : <SentryJob key={j.id} j={j} act={act} busy={busy} />,
+@@@NEW
+              j.agent === "tempo" ? (
+                <TempoJob key={j.id} j={j} act={act} busy={busy} />
+              ) : j.agent === "perch" ? (
+                <PerchJob key={j.id} j={j} act={act} busy={busy} />
+              ) : (
+                <SentryJob key={j.id} j={j} act={act} busy={busy} />
+              ),
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+import { TEMPO_ACTIVE, deleteTempo, getTempo, listTempo, saveTempo } from "../../../lib/tempo";
+@@@NEW
+import { TEMPO_ACTIVE, deleteTempo, getTempo, listTempo, saveTempo } from "../../../lib/tempo";
+import { PERCH_ACTIVE, deletePerch, getPerch, listPerch, perchReference, savePerch } from "../../../lib/perch";
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const [s, t] = await Promise.all([listJobs(), listTempo()]);
+  const jobs = [...s.map((j) => ({ agent: "sentry", ...j })), ...t]
+@@@NEW
+  const [s, t, p] = await Promise.all([listJobs(), listTempo(), listPerch()]);
+  const jobs = [...s.map((j) => ({ agent: "sentry", ...j })), ...t, ...p]
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  if (b.agent !== "sentry" && b.agent !== "tempo") return err("Only Sentry and Tempo are live right now.");
+@@@NEW
+  if (!["sentry", "tempo", "perch"].includes(b.agent)) return err("Only Sentry, Tempo and Perch are live right now.");
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const now = new Date().toISOString();
+@@@NEW
+  const now = new Date().toISOString();
+
+  if (b.agent === "perch") {
+    const side = b.side === "Sell" ? "Sell" : "Buy";
+    const offset = Number(b.offset);
+    const budget = Number(b.budget);
+    const slippage = Number(b.slippage);
+    const EXP = { "1h": 3600e3, "24h": 86400e3, "7d": 7 * 86400e3 };
+    if (!(offset >= 0.5 && offset <= 90)) return err("Distance from market must be 0.5%–90%.");
+    if (!(budget > 0) || budget > 100) return err("Budget must be between 0 and 100 ETH.");
+    if (!(slippage >= 0.1 && slippage <= 20)) return err("Max slippage must be 0.1%–20%.");
+    if (!EXP[b.expiry]) return err("Pick an expiry.");
+    const { w, error } = await wallet(did);
+    if (error) return err(error);
+    const mine = (await listPerch()).filter((j) => j.userId === did && PERCH_ACTIVE.includes(j.status));
+    if (mine.length >= 10) return err("You can run up to 10 Perch orders at once.");
+    const draft = {
+      id: randomUUID(),
+      agent: "perch",
+      userId: did,
+      walletId: w.id,
+      address: w.address,
+      ...t,
+      side,
+      offset,
+      budget: String(budget),
+      budgetWei: parseEther(String(budget)).toString(),
+      slippage,
+      expiry: b.expiry,
+      expiresAt: Date.now() + EXP[b.expiry],
+      status: "waiting",
+      paused: false,
+      movePct: 0,
+      createdAt: now,
+    };
+    try {
+      Object.assign(draft, await perchReference(draft));
+    } catch (e) {
+      return err(e.message);
+    }
+    draft.log = [{ at: now, msg: `Created. Watching for ${side === "Buy" ? "−" : "+"}${offset}%.` }];
+    const job = await savePerch(draft);
+    return NextResponse.json({ job: publicJob(job) });
+  }
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  const isTempo = !job;
+  if (isTempo) job = await getTempo(id);
+@@@NEW
+  let isTempo = false;
+  let isPerch = false;
+  if (!job) {
+    job = await getTempo(id);
+    isTempo = !!job;
+  }
+  if (!job) {
+    job = await getPerch(id);
+    isPerch = !!job;
+  }
+@@@END
+@@@FILE src/app/api/agents/route.js
+@@@OLD
+  if (!job || job.userId !== did) return err("Agent not found.", 404);
+@@@NEW
+  if (!job || job.userId !== did) return err("Agent not found.", 404);
+
+  if (isPerch) {
+    if (action === "pause") job.paused = true;
+    else if (action === "resume") job.paused = false;
+    else if (action === "close") {
+      if (job.status !== "waiting") return err("This order can't be cancelled right now.");
+      job.status = "cancelled";
+      job.note = "Cancelled.";
+    } else if (action === "delete") {
+      if (PERCH_ACTIVE.includes(job.status)) return err("Cancel the order before deleting.");
+      await deletePerch(job.id);
+      return NextResponse.json({ ok: true });
+    } else return err("Unknown action.");
+    await savePerch(job);
+    return NextResponse.json({ job: publicJob(job) });
+  }
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+import { tickTempo } from "../../../../lib/tempo";
+@@@NEW
+import { tickTempo } from "../../../../lib/tempo";
+import { tickPerch } from "../../../../lib/perch";
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+// Advances Sentry (TP/SL) and Tempo (DCA/TWAP) agents.
+@@@NEW
+// Advances Sentry (TP/SL), Tempo (DCA/TWAP) and Perch (limit order) agents.
+@@@END
+@@@FILE src/app/api/sentry/tick/route.js
+@@@OLD
+    const tempo = await tickTempo(started + 52_000).catch((e) => ({ error: String(e?.message || e).slice(0, 200) }));
+    return NextResponse.json({ ...sentry, tempo });
+@@@NEW
+    const tempo = await tickTempo(started + 42_000).catch((e) => ({ error: String(e?.message || e).slice(0, 200) }));
+    const perch = await tickPerch(started + 53_000).catch((e) => ({ error: String(e?.message || e).slice(0, 200) }));
+    return NextResponse.json({ ...sentry, tempo, perch });
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+              Sentry and Tempo are live and trade from your own wallet. Perch and Echo can be set up today and start later; voting and drops switch on at launch.
+@@@NEW
+              Sentry, Tempo and Perch are live and trade from your own wallet. Echo can be set up today and starts later; voting and drops switch on at launch.
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+                ["Distance", "How far from today's price, in %."],
+                ["Budget", "ETH to use."],
+@@@NEW
+                ["Token", "$NEXTRA (on its Pons curve) or a stock token (on Uniswap)."],
+                ["Distance", "How far from the price when you create the order, in %."],
+                ["Budget", "ETH to spend on a buy, or the ETH value of tokens to sell."],
+@@@END
+@@@FILE src/app/docs/page.jsx
+@@@OLD
+              example="Buy NVDA with 0.25 ETH when it's 5% below today's price. Cancel after 24h."
+@@@NEW
+              example="Buy 0.01 ETH of $NEXTRA when it's 10% below the current price. Cancel after 24h."
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+  { status: "Building", title: "Perch", text: "Limit orders on the same price-watching engine." },
+@@@NEW
+  { status: "Live", title: "Perch", text: "Limit buys below and sells above the market, for $NEXTRA and stock tokens." },
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+  { status: "Planned", title: "Echo", text: "Mirror trades from wallets you choose." },
+@@@NEW
+  { status: "Building", title: "Echo", text: "Mirror trades from wallets you choose." },
+@@@END
+@@@FILE src/lib/stats.js
+@@@OLD
+import { listTempo } from "./tempo";
+@@@NEW
+import { listTempo } from "./tempo";
+import { listPerch } from "./perch";
+@@@END
+@@@FILE src/lib/stats.js
+@@@OLD
+  const [sentry, tempo] = await Promise.all([listJobs(), listTempo()]);
+@@@NEW
+  const [sentry, tempo, perch] = await Promise.all([listJobs(), listTempo(), listPerch().catch(() => [])]);
+@@@END
+@@@FILE src/lib/stats.js
+@@@OLD
+  const all = [...sentry, ...tempo];
+@@@NEW
+  for (const j of perch) {
+    if (j.userId) users.add(j.userId);
+    if (j.status === "filled" && j.fillTx) {
+      trades++;
+      volume += big(j.filledEthWei);
+      recent.push({ agent: "Perch", side: j.side === "Buy" ? "Limit buy" : "Limit sell", token: label(j.token), eth: eth(big(j.filledEthWei)), at: j.filledAt, tx: j.fillTx });
+    }
+  }
+  const all = [...sentry, ...tempo, ...perch];
+@@@END
+@@@FILE src/lib/stats.js
+@@@OLD
+    active: sentry.filter((j) => ["pending", "buying", "holding", "selling"].includes(j.status)).length + tempo.filter((j) => j.status === "running").length,
+@@@NEW
+    active:
+      sentry.filter((j) => ["pending", "buying", "holding", "selling"].includes(j.status)).length +
+      tempo.filter((j) => j.status === "running").length +
+      perch.filter((j) => ["waiting", "filling"].includes(j.status)).length,
+@@@END

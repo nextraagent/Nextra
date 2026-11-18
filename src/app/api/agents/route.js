@@ -4,6 +4,7 @@ import { parseEther } from "viem";
 import { embeddedWallet, getPrivyUser, verifyAccessToken } from "../../../lib/privyServer";
 import { ACTIVE, deleteJob, getJob, listJobs, saveJob } from "../../../lib/sentry";
 import { TEMPO_ACTIVE, deleteTempo, getTempo, listTempo, saveTempo } from "../../../lib/tempo";
+import { PERCH_ACTIVE, deletePerch, getPerch, listPerch, perchReference, savePerch } from "../../../lib/perch";
 import { stockAddress } from "../../../lib/stocks";
 import { curveFor } from "../../../lib/pons";
 import { NEXTRA } from "../../../lib/nextra";
@@ -29,8 +30,8 @@ export async function GET(req) {
   } catch (e) {
     return err(e.message, 401);
   }
-  const [s, t] = await Promise.all([listJobs(), listTempo()]);
-  const jobs = [...s.map((j) => ({ agent: "sentry", ...j })), ...t]
+  const [s, t, p] = await Promise.all([listJobs(), listTempo(), listPerch()]);
+  const jobs = [...s.map((j) => ({ agent: "sentry", ...j })), ...t, ...p]
     .filter((j) => j.userId === did)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     .map(publicJob);
@@ -61,10 +62,53 @@ export async function POST(req) {
     return err(e.message, 401);
   }
   const b = await req.json().catch(() => ({}));
-  if (b.agent !== "sentry" && b.agent !== "tempo") return err("Only Sentry and Tempo are live right now.");
+  if (!["sentry", "tempo", "perch"].includes(b.agent)) return err("Only Sentry, Tempo and Perch are live right now.");
   const t = pickToken(b.token);
   if (!t.tokenAddress) return err("Pick a supported token.");
   const now = new Date().toISOString();
+
+  if (b.agent === "perch") {
+    const side = b.side === "Sell" ? "Sell" : "Buy";
+    const offset = Number(b.offset);
+    const budget = Number(b.budget);
+    const slippage = Number(b.slippage);
+    const EXP = { "1h": 3600e3, "24h": 86400e3, "7d": 7 * 86400e3 };
+    if (!(offset >= 0.5 && offset <= 90)) return err("Distance from market must be 0.5%–90%.");
+    if (!(budget > 0) || budget > 100) return err("Budget must be between 0 and 100 ETH.");
+    if (!(slippage >= 0.1 && slippage <= 20)) return err("Max slippage must be 0.1%–20%.");
+    if (!EXP[b.expiry]) return err("Pick an expiry.");
+    const { w, error } = await wallet(did);
+    if (error) return err(error);
+    const mine = (await listPerch()).filter((j) => j.userId === did && PERCH_ACTIVE.includes(j.status));
+    if (mine.length >= 10) return err("You can run up to 10 Perch orders at once.");
+    const draft = {
+      id: randomUUID(),
+      agent: "perch",
+      userId: did,
+      walletId: w.id,
+      address: w.address,
+      ...t,
+      side,
+      offset,
+      budget: String(budget),
+      budgetWei: parseEther(String(budget)).toString(),
+      slippage,
+      expiry: b.expiry,
+      expiresAt: Date.now() + EXP[b.expiry],
+      status: "waiting",
+      paused: false,
+      movePct: 0,
+      createdAt: now,
+    };
+    try {
+      Object.assign(draft, await perchReference(draft));
+    } catch (e) {
+      return err(e.message);
+    }
+    draft.log = [{ at: now, msg: `Created. Watching for ${side === "Buy" ? "−" : "+"}${offset}%.` }];
+    const job = await savePerch(draft);
+    return NextResponse.json({ job: publicJob(job) });
+  }
 
   if (b.agent === "tempo") {
     const mode = b.mode === "TWAP" ? "TWAP" : "DCA";
@@ -146,9 +190,33 @@ export async function PATCH(req) {
   const { id, action } = await req.json().catch(() => ({}));
   if (!id) return err("Agent not found.", 404);
   let job = await getJob(id);
-  const isTempo = !job;
-  if (isTempo) job = await getTempo(id);
+  let isTempo = false;
+  let isPerch = false;
+  if (!job) {
+    job = await getTempo(id);
+    isTempo = !!job;
+  }
+  if (!job) {
+    job = await getPerch(id);
+    isPerch = !!job;
+  }
   if (!job || job.userId !== did) return err("Agent not found.", 404);
+
+  if (isPerch) {
+    if (action === "pause") job.paused = true;
+    else if (action === "resume") job.paused = false;
+    else if (action === "close") {
+      if (job.status !== "waiting") return err("This order can't be cancelled right now.");
+      job.status = "cancelled";
+      job.note = "Cancelled.";
+    } else if (action === "delete") {
+      if (PERCH_ACTIVE.includes(job.status)) return err("Cancel the order before deleting.");
+      await deletePerch(job.id);
+      return NextResponse.json({ ok: true });
+    } else return err("Unknown action.");
+    await savePerch(job);
+    return NextResponse.json({ job: publicJob(job) });
+  }
 
   if (isTempo) {
     if (action === "pause") job.paused = true;

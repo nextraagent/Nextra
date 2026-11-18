@@ -17,6 +17,7 @@
 .as-tag { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; background: #2c2c27; color: #cfc9b8; }
 .as-tag.sentry { background: rgba(138,209,26,.16); color: #8ad11a; }
 .as-tag.tempo { background: rgba(255,178,122,.14); color: #ffb27a; }
+.as-tag.perch { background: rgba(140,190,255,.14); color: #9cc6ff; }
 .as-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #cfc9b8; }
 .as-what b { color: #f4efe4; }
 .as-eth { font-family: "JetBrains Mono", monospace; font-size: 13px; }

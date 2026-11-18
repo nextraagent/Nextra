@@ -70,7 +70,7 @@ export default function AgentStats() {
         <span className="as-live">
           <i /> Agents at work
         </span>
-        <span className="as-sub">Live totals from every Sentry and Tempo agent, on-chain.</span>
+        <span className="as-sub">Live totals from every Nextra agent, on-chain.</span>
       </div>
       <div className="as-grid">
         <Stat label="Trades executed" value={s?.trades} />

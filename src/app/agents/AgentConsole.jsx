@@ -109,7 +109,7 @@ const AGENTS = [
     icon: "flag",
     tagline: "Waits for your price.",
     text: "Set the price you want. Perch waits and fills the order when the market gets there.",
-    defaults: { side: "Buy", token: "NVDA", offset: "5", budget: "0.25", expiry: "24h", slippage: "1" },
+    defaults: { side: "Buy", token: "NEXTRA", offset: "10", budget: "0.01", expiry: "24h", slippage: "3" },
   },
   {
     id: "echo",
@@ -138,9 +138,9 @@ function describe(id, c) {
         Number(c.every) === 1 ? "" : "s"
       } until ${c.budget} ETH in total is ${c.mode === "DCA" ? "spent" : "sold"}.`;
     case "perch":
-      return `${c.side} ${c.token} with ${c.budget} ETH when the price is ${c.offset}% ${
-        c.side === "Buy" ? "below" : "above"
-      } today's market. Max slippage ${c.slippage}%. Cancels after ${c.expiry}.`;
+      return `${c.side === "Buy" ? `Buy ${c.budget} ETH of` : `Sell ${c.budget} ETH worth of`} ${c.token === "NEXTRA" ? "$NEXTRA" : c.token} when the price is ${
+        c.offset
+      }% ${c.side === "Buy" ? "below" : "above"} the price right now. Max slippage ${c.slippage}%. Cancels after ${c.expiry}.`;
     case "echo":
       return c.wallets.length
         ? `Copy every trade from ${c.wallets.length} wallet${c.wallets.length > 1 ? "s" : ""} at ${
@@ -265,14 +265,14 @@ function PerchForm({ c, set }) {
       <Field label="Side">
         <Seg options={[{ v: "Buy", l: "Buy below" }, { v: "Sell", l: "Sell above" }]} value={c.side} onChange={(v) => set("side", v)} />
       </Field>
-      <Field label="Token">
-        <TokenSelect value={c.token} onChange={(v) => set("token", v)} />
+      <Field label="Token" hint={c.token === "NEXTRA" ? "Trades on the Pons curve." : undefined}>
+        <TokenSelect value={c.token} onChange={(v) => set("token", v)} options={SENTRY_OPTIONS} logo />
       </Field>
       <div className="ag-two">
         <Field label={c.side === "Buy" ? "Below market" : "Above market"}>
           <Num value={c.offset} onChange={(v) => set("offset", v)} suffix="%" />
         </Field>
-        <Field label="Budget">
+        <Field label={c.side === "Buy" ? "Spend" : "Sell (ETH value)"} hint={c.side === "Sell" ? "Tokens you hold, worth this much now." : undefined}>
           <Num value={c.budget} onChange={(v) => set("budget", v)} suffix="ETH" />
         </Field>
       </div>
@@ -504,7 +504,82 @@ function TempoJob({ j, act, busy }) {
   );
 }
 
-const LIVE = ["sentry", "tempo"];
+function PerchJob({ j, act, busy }) {
+  const live = ["waiting", "filling"].includes(j.status);
+  const label = j.token === "NEXTRA" ? "$NEXTRA" : j.token;
+  const target = j.side === "Buy" ? -j.offset : j.offset;
+  const move = Number(j.movePct || 0);
+  const progress = Math.max(0, Math.min(1, target ? move / target : 0));
+  const left = j.expiresAt - Date.now();
+  const leftTxt = left <= 0 ? "expired" : left < 3600e3 ? `${Math.ceil(left / 60e3)}m` : left < 86400e3 ? `${Math.round(left / 3600e3)}h` : `${Math.round(left / 86400e3)}d`;
+  const chip = j.paused ? "Paused" : { waiting: "Watching", filling: "Filling", filled: "Filled", expired: "Expired", cancelled: "Cancelled", failed: "Failed" }[j.status] || j.status;
+  return (
+    <li className="card ag-job">
+      <div className="ag-li-top">
+        <strong className="ag-job-title">
+          <TokenLogo symbol={j.token} size={30} />
+          Perch · {j.side === "Buy" ? "Limit buy" : "Limit sell"} {label}
+        </strong>
+        <span className={`chip${live && !j.paused ? " live" : ""}`}>{chip}</span>
+      </div>
+      <p className="sub">
+        {j.side === "Buy" ? `Buy ${j.budget} ETH of ${label}` : `Sell ${j.budget} ETH worth of ${label}`}
+        {j.venue === "pons" ? " on Pons" : ""} at {target > 0 ? "+" : ""}
+        {target}% from the price when created.
+      </p>
+      <div className="ag-job-nums">
+        <div>
+          <span>Target</span>
+          <b>{`${target > 0 ? "+" : ""}${target}%`}</b>
+        </div>
+        <div>
+          <span>Now</span>
+          <b className={move >= 0 ? "up" : "down"}>{`${move > 0 ? "+" : ""}${move.toFixed(2)}%`}</b>
+        </div>
+        <div>
+          <span>{j.status === "filled" ? "Filled" : "Expires"}</span>
+          <b>{j.status === "filled" ? `${fmtEth(j.filledEthWei)} ETH` : live ? leftTxt : "–"}</b>
+        </div>
+      </div>
+      {live ? (
+        <div className="ag-prog" aria-hidden="true">
+          <i style={{ width: `${progress * 100}%` }} />
+        </div>
+      ) : null}
+      {j.note || j.error ? <p className="ag-job-note">{j.note || j.error}</p> : null}
+      <div className="ag-job-links">
+        {j.fillTx ? (
+          <a href={`${EXPLORER}/tx/${j.fillTx}`} target="_blank" rel="noopener noreferrer">
+            Fill tx ↗
+          </a>
+        ) : null}
+        {j.pending?.hash ? (
+          <a href={`${EXPLORER}/tx/${j.pending.hash}`} target="_blank" rel="noopener noreferrer">
+            Pending tx ↗
+          </a>
+        ) : null}
+      </div>
+      <div className="ag-li-act">
+        {j.status === "waiting" ? (
+          <>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, j.paused ? "resume" : "pause")}>
+              {j.paused ? "Resume" : "Pause"}
+            </button>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "close")}>
+              Cancel
+            </button>
+          </>
+        ) : !live ? (
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => act(j.id, "delete")}>
+            Remove
+          </button>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+const LIVE = ["sentry", "tempo", "perch"];
 
 export default function AgentConsole() {
   const { ready, authenticated, user, login, logout, getAccessToken } = usePrivy();
@@ -610,7 +685,9 @@ export default function AgentConsole() {
       say(
         isSentry
           ? "Sentry is live. It buys within about a minute, then watches your exit."
-          : `Tempo is live. First ${c.mode === "DCA" ? "buy" : "sell"} within about a minute.`,
+          : active === "perch"
+            ? `Perch is watching. It ${c.side === "Buy" ? "buys" : "sells"} when the price moves ${c.offset}%.`
+            : `Tempo is live. First ${c.mode === "DCA" ? "buy" : "sell"} within about a minute.`,
         7000,
       );
       loadJobs();
@@ -651,8 +728,8 @@ export default function AgentConsole() {
         <h1 className="ag-title">Pick an agent. Set your rules.</h1>
         <p className="lead">Four agents, one wallet. Each one does a single job — choose the one that fits how you trade.</p>
         <div className="ag-note">
-          <span className="chip">Sentry + Tempo live</span>
-          <span>Sentry and Tempo trade for real from your wallet, including $NEXTRA. Perch and Echo are in preview — set them up now, they start later.</span>
+          <span className="chip">Sentry · Tempo · Perch live</span>
+          <span>Sentry, Tempo and Perch trade for real from your wallet, including $NEXTRA. Echo is in preview — set it up now, it starts later.</span>
         </div>
       </section>
 
@@ -720,11 +797,17 @@ export default function AgentConsole() {
         {!authenticated ? (
           <p className="sub">Log in to see your agents.</p>
         ) : jobs.length === 0 && mine.length === 0 ? (
-          <p className="sub">Nothing yet. Start Sentry or Tempo above and it will show here.</p>
+          <p className="sub">Nothing yet. Start Sentry, Tempo or Perch above and it will show here.</p>
         ) : (
           <ul className="ag-list">
             {jobs.map((j) =>
-              j.agent === "tempo" ? <TempoJob key={j.id} j={j} act={act} busy={busy} /> : <SentryJob key={j.id} j={j} act={act} busy={busy} />,
+              j.agent === "tempo" ? (
+                <TempoJob key={j.id} j={j} act={act} busy={busy} />
+              ) : j.agent === "perch" ? (
+                <PerchJob key={j.id} j={j} act={act} busy={busy} />
+              ) : (
+                <SentryJob key={j.id} j={j} act={act} busy={busy} />
+              ),
             )}
             {mine.map((m) => {
               const a = AGENTS.find((x) => x.id === m.agent);

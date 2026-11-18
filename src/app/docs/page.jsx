@@ -121,7 +121,7 @@ export default function DocsPage() {
               </a>
             </div>
             <Callout tone="note" title="Status">
-              Sentry and Tempo are live and trade from your own wallet. Perch and Echo can be set up today and start later; voting and drops switch on at launch.
+              Sentry, Tempo and Perch are live and trade from your own wallet. Echo can be set up today and starts later; voting and drops switch on at launch.
             </Callout>
           </header>
 
@@ -207,12 +207,13 @@ export default function DocsPage() {
               what="Waits for your price and fills the order when the market gets there."
               settings={[
                 ["Side", "Buy below or sell above the market."],
-                ["Distance", "How far from today's price, in %."],
-                ["Budget", "ETH to use."],
+                ["Token", "$NEXTRA (on its Pons curve) or a stock token (on Uniswap)."],
+                ["Distance", "How far from the price when you create the order, in %."],
+                ["Budget", "ETH to spend on a buy, or the ETH value of tokens to sell."],
                 ["Expiry", "1 hour, 24 hours or 7 days."],
                 ["Max slippage", "The worst price you accept, in %."],
               ]}
-              example="Buy NVDA with 0.25 ETH when it's 5% below today's price. Cancel after 24h."
+              example="Buy 0.01 ETH of $NEXTRA when it's 10% below the current price. Cancel after 24h."
             />
             <AgentDoc
               id="echo"
