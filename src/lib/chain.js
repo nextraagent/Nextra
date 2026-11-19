@@ -92,7 +92,9 @@ export async function fetchHolders(token, minBalance = 0n) {
   return Promise.all(
     rows.map(async ([a, v]) => {
       const code = await publicClient.getCode({ address: a }).catch(() => null);
-      return { address: getAddress(a), balance: v, isContract: Boolean(code && code !== "0x") };
+      // EIP-7702 wallets carry a 0xef0100… delegation stub but are still people, not pools.
+      const contract = Boolean(code && code !== "0x" && !code.toLowerCase().startsWith("0xef0100"));
+      return { address: getAddress(a), balance: v, isContract: contract };
     }),
   );
 }
