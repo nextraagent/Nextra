@@ -55,14 +55,15 @@ export async function quote(tokens, fees, amountIn) {
   }
 }
 
-// Best route between two tokens: direct pools at every fee tier, plus via USDG if USDG_ADDRESS is set.
+// Best route between two tokens: direct pools at every fee tier, plus via USDG (most stock tokens trade against it).
+const USDG = "0x5fc5360d0400a0fd4f2af552add042d716f1d168";
 export async function bestRoute(tokenIn, tokenOut, amountIn) {
   const a = tokenIn.toLowerCase();
   const b = tokenOut.toLowerCase();
   const cands = FEES.map((f) => ({ tokens: [a, b], fees: [f] }));
-  const mid = (process.env.USDG_ADDRESS || "").toLowerCase();
+  const mid = (process.env.USDG_ADDRESS || USDG).toLowerCase();
   if (/^0x[0-9a-f]{40}$/.test(mid) && mid !== a && mid !== b) {
-    for (const f1 of [500, 3000, 100]) for (const f2 of [500, 3000, 10000]) cands.push({ tokens: [a, mid, b], fees: [f1, f2] });
+    for (const f1 of FEES) for (const f2 of FEES) cands.push({ tokens: [a, mid, b], fees: [f1, f2] });
   }
   const outs = await Promise.all(cands.map((c) => quote(c.tokens, c.fees, amountIn)));
   let best = null;

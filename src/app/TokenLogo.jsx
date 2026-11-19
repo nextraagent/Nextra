@@ -16,6 +16,17 @@ const DOMAINS = {
   COIN: "coinbase.com",
   SPY: "ssga.com",
   HOOD: "robinhood.com",
+  QQQ: "invesco.com",
+  PLTR: "palantir.com",
+  AMD: "amd.com",
+  NFLX: "netflix.com",
+  AVGO: "broadcom.com",
+  MU: "micron.com",
+  INTC: "intel.com",
+  CRCL: "circle.com",
+  RIVN: "rivian.com",
+  USAR: "usare.com",
+  SPCX: "spacex.com",
 };
 
 export default function TokenLogo({ symbol, size = 40 }) {
