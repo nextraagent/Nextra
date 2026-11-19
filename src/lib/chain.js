@@ -61,31 +61,46 @@ export async function minHoldUnits(token) {
   return MIN_HOLD * 10n ** BigInt(await tokenDecimals(token));
 }
 
-// All holders of the token from Blockscout, as { address, balance(bigint), isContract }.
-export async function fetchHolders(token) {
-  const out = [];
-  let params = "";
-  for (let page = 0; page < 200; page++) {
-    const res = await fetch(`${EXPLORER}/api/v2/tokens/${token}/holders${params}`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`holders ${res.status}`);
-    const j = await res.json();
-    for (const it of j.items || []) {
-      out.push({
-        address: getAddress(it.address.hash),
-        balance: BigInt(it.value),
-        isContract: Boolean(it.address.is_contract),
-      });
-    }
-    if (!j.next_page_params) break;
-    params = "?" + new URLSearchParams(j.next_page_params).toString();
+// All holders of the token, rebuilt from its Transfer events straight from the chain RPC
+// (Blockscout's API blocks server requests). Returns [{ address, balance(bigint), isContract }].
+const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const ZERO_TOPIC = "0x" + "0".repeat(64);
+const SPAN = 9_999_999n; // the RPC allows up to 10M blocks per log query
+const NOT_HOLDERS = new Set(["0x0000000000000000000000000000000000000000", "0x000000000000000000000000000000000000dead"]);
+
+export async function fetchHolders(token, minBalance = 0n) {
+  const latest = await publicClient.getBlockNumber();
+  const logs = [];
+  // Walk back from the newest block until the mint (Transfer from 0x0) is found.
+  for (let to = latest, i = 0; to > 0n && i < 30; to -= SPAN + 1n, i++) {
+    const from = to > SPAN ? to - SPAN : 0n;
+    const chunk = await publicClient.request({
+      method: "eth_getLogs",
+      params: [{ address: token, topics: [TRANSFER], fromBlock: `0x${from.toString(16)}`, toBlock: `0x${to.toString(16)}` }],
+    });
+    logs.push(...chunk);
+    if (chunk.some((l) => l.topics[1] === ZERO_TOPIC)) break;
   }
-  return out;
+  const bal = new Map();
+  const add = (a, v) => bal.set(a, (bal.get(a) || 0n) + v);
+  for (const l of logs) {
+    const v = BigInt(l.data);
+    add(`0x${l.topics[1].slice(26)}`, -v);
+    add(`0x${l.topics[2].slice(26)}`, v);
+  }
+  const rows = [...bal].filter(([a, v]) => v > 0n && v >= minBalance && !NOT_HOLDERS.has(a));
+  return Promise.all(
+    rows.map(async ([a, v]) => {
+      const code = await publicClient.getCode({ address: a }).catch(() => null);
+      return { address: getAddress(a), balance: v, isContract: Boolean(code && code !== "0x") };
+    }),
+  );
 }
 
 // Holders who qualify for a drop: >= MIN_HOLD, not a contract (pools/LP), not excluded.
 export async function eligibleHolders(c = cfg()) {
   const min = await minHoldUnits(c.token);
-  const all = await fetchHolders(c.token);
+  const all = await fetchHolders(c.token, min);
   return all.filter((h) => h.balance >= min && !h.isContract && !c.exclude.has(h.address.toLowerCase()));
 }
 
