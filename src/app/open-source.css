@@ -24,6 +24,7 @@
 .osb-name span { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; color: #6b675c; }
 .osb-go { margin-left: auto; font-size: 13px; font-weight: 600; color: #3d6a00; white-space: nowrap; }
 .osb-cmd { box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; background: #161613; color: #cfc9b8; border: 0; border-radius: 12px; padding: 9px 12px; cursor: pointer; text-align: left; }
-.osb-cmd code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.osb-cmd code { background: none; border: 0; padding: 0; margin: 0; border-radius: 0; color: #cfc9b8; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .osb-cmd code b { color: #8ad11a; }
 .osb-cmd span { margin-left: auto; font: 600 11px "JetBrains Mono", ui-monospace, monospace; color: #161613; background: #8ad11a; border-radius: 999px; padding: 4px 10px; flex: none; }
+.osb-text { margin: 0; padding: 0 4px 2px; font-size: 13px; line-height: 1.5; color: #4a473f; }

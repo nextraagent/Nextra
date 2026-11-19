@@ -84,6 +84,10 @@ export function OpenSourceBar() {
         </span>
         <span className="osb-go">View code ↗</span>
       </a>
+      <p className="osb-text">
+        Every agent, rule and trade path is public. Read how Sentry, Tempo and Perch trade from your own wallet, or run Nextra
+        yourself with the command below.
+      </p>
       <button type="button" className="osb-cmd" onClick={copy} aria-label="Copy install command">
         <code>
           <b>$</b> git clone … &amp;&amp; npm install
