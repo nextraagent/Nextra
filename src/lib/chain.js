@@ -1,4 +1,8 @@
 import { createPublicClient, defineChain, http, getAddress, isAddress, parseAbi } from "viem";
+import { STOCKS } from "./stocks";
+
+// Stocks holders can vote on for the daily drop. Every one has a real Robinhood token and a Uniswap route.
+const VOTE_STOCKS = ["NVDA", "TSLA", "AAPL", "AMZN", "META", "GOOGL", "MSFT", "PLTR"];
 
 export const robinhood = defineChain({
   id: 4663,
@@ -22,7 +26,7 @@ export const publicClient = createPublicClient({ chain: robinhood, transport: ht
 
 export function cfg() {
   const addr = (v) => (v && isAddress(v.trim()) ? getAddress(v.trim()) : null);
-  let stocks = {};
+  let stocks = Object.fromEntries(Object.entries(STOCKS).map(([k, v]) => [k, addr(v)]));
   try {
     const raw = JSON.parse(process.env.STOCK_TOKENS || "{}");
     for (const [k, v] of Object.entries(raw)) if (addr(v)) stocks[k.toUpperCase()] = addr(v);
@@ -40,7 +44,7 @@ export function cfg() {
     token: addr(process.env.NEXTRA_TOKEN),
     vault,
     stocks,
-    candidates: Object.keys(stocks).length ? Object.keys(stocks) : ["NVDA", "TSLA", "AAPL", "AMZN", "META", "GOOGL", "MSFT", "HOOD"],
+    candidates: (process.env.VOTE_STOCKS ? process.env.VOTE_STOCKS.split(/[\s,]+/).map((x) => x.toUpperCase()) : VOTE_STOCKS).filter((x) => stocks[x]),
     defaultStock: (process.env.DEFAULT_STOCK || "NVDA").toUpperCase(),
     exclude,
     enabled: process.env.DROPS_ENABLED === "true",

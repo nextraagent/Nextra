@@ -12,7 +12,8 @@ export async function tally(round, candidates = []) {
   const flat = (await redis("HGETALL", key(round))) || [];
   for (let i = 1; i < flat.length; i += 2) {
     const sym = flat[i];
-    if (sym) counts[sym] = (counts[sym] || 0) + 1;
+    // Votes for a stock that is no longer on the ballot are ignored.
+    if (sym && (!candidates.length || sym in counts)) counts[sym] = (counts[sym] || 0) + 1;
   }
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   return { round, counts, total };
