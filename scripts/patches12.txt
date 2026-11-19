@@ -1,0 +1,46 @@
+@@@FILE src/app/page.jsx
+@@@OLD
+import AgentStats from "./AgentStats";
+@@@NEW
+import AgentStats from "./AgentStats";
+import OpenSource from "./OpenSource";
+@@@END
+@@@FILE src/app/page.jsx
+@@@OLD
+        <Roadmap />
+        <Faq />
+@@@NEW
+        <Roadmap />
+        <OpenSource />
+        <Faq />
+@@@END
+@@@FILE src/app/Footer.jsx
+@@@OLD
+          <a href="https://x.com/NextraAgent" target="_blank" rel="noopener noreferrer">
+            X (Twitter)
+          </a>
+        </div>
+      </div>
+      <p className="nx-credit">
+        Charts by{" "}
+        <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">
+          TradingView
+        </a>{" "}
+        Lightweight Charts™
+      </p>
+@@@NEW
+          <a href="https://x.com/NextraAgent" target="_blank" rel="noopener noreferrer">
+            X (Twitter)
+          </a>
+          <a href="https://github.com/nextraagent/Nextra" target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+        </div>
+      </div>
+@@@END
+@@@FILE src/app/TokenCard.jsx
+@@@OLD
+fontSize: 10, attributionLogo: false },
+@@@NEW
+fontSize: 10, attributionLogo: true },
+@@@END

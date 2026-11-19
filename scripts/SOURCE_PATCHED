@@ -1,0 +1,2 @@
+The files in src/ already include every change from scripts/patches*.txt.
+This marker tells scripts/apply-patches.mjs to skip, so a fresh clone builds as-is.

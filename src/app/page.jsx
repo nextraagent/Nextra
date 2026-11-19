@@ -5,6 +5,7 @@ import Footer from "./Footer";
 import Logo3D from "./Logo3D";
 import TokenCard from "./TokenCard";
 import AgentStats from "./AgentStats";
+import OpenSource from "./OpenSource";
 import "./home-new.css";
 
 const AGENTS = [
@@ -211,6 +212,7 @@ export default function Home() {
         <Agents />
         <VaultBand />
         <Roadmap />
+        <OpenSource />
         <Faq />
       </main>
       <Footer />

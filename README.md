@@ -2,7 +2,7 @@
 
 **Agents that trade your rules. A Vault that drops stocks.**
 
-Nextra ($NEXTRA) is a memecoin on [Robinhood Chain](https://robinhoodchain.blockscout.com) with two utilities:
+Nextra ($NEXTRA) is a utility token on [Robinhood Chain](https://robinhoodchain.blockscout.com) with two utilities:
 
 - **Trading agents** that follow rules you set and trade from your own wallet.
 - **The Vault**, which turns $NEXTRA creator fees into tokenized stocks and drops them to holders every trading day.
@@ -18,8 +18,8 @@ Website: [nextra-agent.xyz](https://www.nextra-agent.xyz) · Docs: [nextra-agent
 | Agent  | Job                                                        | Status      |
 | ------ | ---------------------------------------------------------- | ----------- |
 | Sentry | Buy a stock token, exit at your take-profit or stop-loss   | **Live**    |
-| Tempo  | DCA buys or TWAP sells on a fixed schedule                 | Coming soon |
-| Perch  | Limit orders that wait for your price                      | Coming soon |
+| Tempo  | DCA buys or TWAP sells on a fixed schedule                 | **Live**    |
+| Perch  | Limit orders that wait for your price                      | **Live**    |
 | Echo   | Copy trades from wallets you follow                        | Coming soon |
 
 **How Sentry works**
@@ -55,7 +55,7 @@ The portfolio page shows ETH and stock-token balances valued at Uniswap prices. 
 - [Next.js 16](https://nextjs.org) (App Router) + React 19
 - [Privy](https://privy.io) for login, embedded wallets and server-side signers
 - [viem](https://viem.sh) for chain reads, Uniswap quotes and transaction building
-- [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for agent jobs and votes
+- [Upstash Redis](https://upstash.com) (REST, free tier) for agent jobs, votes and public stats
 - Robinhood Chain (chain ID `4663`), Uniswap v3 (SwapRouter02 + QuoterV2)
 
 ## Project structure
@@ -85,6 +85,8 @@ src/
 ## Getting started
 
 ```bash
+git clone https://github.com/nextraagent/Nextra.git
+cd Nextra
 npm install
 cp .env.example .env.local   # fill in your own values
 npm run dev
@@ -102,7 +104,7 @@ See [`.env.example`](.env.example) for the full list. Secrets are **never** comm
 | `NEXT_PUBLIC_PRIVY_SIGNER_ID` | no | Privy authorization key ID used as Sentry's signer |
 | `PRIVY_APP_SECRET` | **yes** | Privy app secret |
 | `PRIVY_AUTHORIZATION_KEY` | **yes** | Privy authorization private key (`wallet-auth:…`) |
-| `BLOB_READ_WRITE_TOKEN` | **yes** | Vercel Blob storage token |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | **yes** | Upstash Redis REST URL and token (added for you when you connect Upstash on Vercel) |
 | `CRON_SECRET` | **yes** | Protects the daily drop cron |
 | `VAULT_PRIVATE_KEY` | **yes** | Vault wallet key for daily drops (after launch) |
 | `SENTRY_TICK_KEY` | optional | If set, `/api/sentry/tick` requires `?key=` |
@@ -123,4 +125,4 @@ See [`.env.example`](.env.example) for the full list. Secrets are **never** comm
 
 ## Disclaimer
 
-$NEXTRA is a memecoin and can lose value. Vault drops depend on trading fees, change every day and can be zero. Agents trade real funds from your wallet. Nothing here is financial advice or a promise of returns. Use at your own risk.
+Agents trade real funds from the user's own wallet, inside the limits the user sets. This code is provided as is, without warranty.

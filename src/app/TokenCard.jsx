@@ -40,7 +40,7 @@ function Chart({ tf }) {
       if (!alive || !box.current) return;
       chart = lc.createChart(box.current, {
         autoSize: true,
-        layout: { background: { type: "solid", color: "transparent" }, textColor: "#8a8576", fontFamily: "JetBrains Mono, ui-monospace, monospace", fontSize: 10, attributionLogo: false },
+        layout: { background: { type: "solid", color: "transparent" }, textColor: "#8a8576", fontFamily: "JetBrains Mono, ui-monospace, monospace", fontSize: 10, attributionLogo: true },
         grid: { vertLines: { color: "rgba(22,22,19,.04)" }, horzLines: { color: "rgba(22,22,19,.06)" } },
         rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.12, bottom: 0.08 } },
         timeScale: { borderVisible: false, timeVisible: tf !== "1d", secondsVisible: false, rightOffset: 3 },

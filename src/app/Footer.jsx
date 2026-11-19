@@ -26,15 +26,11 @@ export default function Footer() {
           <a href="https://x.com/NextraAgent" target="_blank" rel="noopener noreferrer">
             X (Twitter)
           </a>
+          <a href="https://github.com/nextraagent/Nextra" target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
         </div>
       </div>
-      <p className="nx-credit">
-        Charts by{" "}
-        <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">
-          TradingView
-        </a>{" "}
-        Lightweight Charts™
-      </p>
     </footer>
   );
 }
