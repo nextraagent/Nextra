@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePrivy, useWallets, useSendTransaction } from "@privy-io/react-auth";
-import { encodeFunctionData, formatEther, formatUnits, parseAbi, parseEther, parseUnits } from "viem";
+import { createPublicClient, encodeFunctionData, formatEther, formatUnits, http, parseAbi, parseEther, parseUnits } from "viem";
 import { robinhoodChain } from "../agents/Providers";
 import TokenLogo from "../TokenLogo";
 
@@ -10,6 +10,24 @@ const EXPLORER = "https://robinhoodchain.blockscout.com";
 const GAS_RESERVE = parseEther("0.0002");
 const erc20 = parseAbi(["function transfer(address to, uint256 amount) returns (bool)"]);
 const isAddr = (a) => /^0x[0-9a-fA-F]{40}$/.test((a || "").trim());
+// Gas is estimated here, straight from the Robinhood Chain RPC, so the wallet pop-up never waits on its own fee lookup.
+const rpc = createPublicClient({ chain: robinhoodChain, transport: http() });
+async function withGas(tx, from) {
+  const [gas, fees] = await Promise.all([
+    rpc.estimateGas({ account: from, to: tx.to, value: tx.value, data: tx.data }),
+    rpc.estimateFeesPerGas().catch(async () => {
+      const p = await rpc.getGasPrice();
+      return { maxFeePerGas: p * 2n, maxPriorityFeePerGas: 0n };
+    }),
+  ]);
+  return { ...tx, gasLimit: (gas * 13n) / 10n, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas ?? 0n };
+}
+const plainError = (m) =>
+  /insufficient funds|exceeds balance|gas required exceeds/i.test(m)
+    ? "Not enough ETH to pay the network fee. Keep a little ETH in this wallet."
+    : /reject|denied|cancel/i.test(m)
+      ? "Cancelled."
+      : m.slice(0, 160);
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
 const fmt = (wei, max = 5) =>
   wei == null ? "–" : Number(formatEther(BigInt(wei))).toLocaleString("en-US", { maximumFractionDigits: max });
@@ -52,12 +70,13 @@ function SendPanel({ assets, initial, onClose, onSent, from }) {
               chainId: robinhoodChain.id,
               data: encodeFunctionData({ abi: erc20, functionName: "transfer", args: [target, amountWei] }),
             };
-      const r = await sendTransaction(tx, { address: from });
+      const full = await withGas(tx, from);
+      // The Send panel is the confirmation step, so Privy's own pop-up is skipped.
+      const r = await sendTransaction(full, { address: from, uiOptions: { showWalletUIs: false } });
       setHash(r?.hash || r?.transactionHash || "");
       onSent?.();
     } catch (e) {
-      const m = String(e?.message || e);
-      setMsg(/reject|denied|cancel/i.test(m) ? "Cancelled." : m.slice(0, 160));
+      setMsg(plainError(String(e?.shortMessage || e?.message || e)));
     } finally {
       setBusy(false);
     }
