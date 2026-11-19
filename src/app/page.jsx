@@ -5,7 +5,7 @@ import Footer from "./Footer";
 import Logo3D from "./Logo3D";
 import TokenCard from "./TokenCard";
 import AgentStats from "./AgentStats";
-import OpenSource from "./OpenSource";
+import { OpenSourceBar } from "./OpenSource";
 import "./home-new.css";
 
 const AGENTS = [
@@ -144,6 +144,7 @@ function Hero() {
       </div>
       <div className="nx-hero-art">
         <Logo3D />
+        <OpenSourceBar />
         <TokenCard />
       </div>
     </section>
@@ -212,7 +213,6 @@ export default function Home() {
         <Agents />
         <VaultBand />
         <Roadmap />
-        <OpenSource />
         <Faq />
       </main>
       <Footer />

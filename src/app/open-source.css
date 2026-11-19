@@ -14,3 +14,16 @@
   .os-band { grid-template-columns: 1fr; }
   .os-term pre { font-size: 12px; }
 }
+
+/* compact hero bar */
+.osb { box-sizing: border-box; width: 100%; max-width: 460px; background: #fbf8f1; border: 1px solid #e2daca; border-radius: 20px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 18px 40px -34px rgba(22, 22, 19, 0.35); margin-bottom: 10px; }
+.osb-top { display: flex; align-items: center; gap: 10px; color: #161613; text-decoration: none; padding: 2px 4px; }
+.osb-ico { width: 34px; height: 34px; border-radius: 10px; background: #161613; color: #f4efe4; display: grid; place-items: center; flex: none; }
+.osb-name { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.osb-name b { font-size: 14px; }
+.osb-name span { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; color: #6b675c; }
+.osb-go { margin-left: auto; font-size: 13px; font-weight: 600; color: #3d6a00; white-space: nowrap; }
+.osb-cmd { box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; background: #161613; color: #cfc9b8; border: 0; border-radius: 12px; padding: 9px 12px; cursor: pointer; text-align: left; }
+.osb-cmd code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.osb-cmd code b { color: #8ad11a; }
+.osb-cmd span { margin-left: auto; font: 600 11px "JetBrains Mono", ui-monospace, monospace; color: #161613; background: #8ad11a; border-radius: 999px; padding: 4px 10px; flex: none; }

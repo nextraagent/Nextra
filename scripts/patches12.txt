@@ -3,16 +3,16 @@
 import AgentStats from "./AgentStats";
 @@@NEW
 import AgentStats from "./AgentStats";
-import OpenSource from "./OpenSource";
+import { OpenSourceBar } from "./OpenSource";
 @@@END
 @@@FILE src/app/page.jsx
 @@@OLD
-        <Roadmap />
-        <Faq />
+        <Logo3D />
+        <TokenCard />
 @@@NEW
-        <Roadmap />
-        <OpenSource />
-        <Faq />
+        <Logo3D />
+        <OpenSourceBar />
+        <TokenCard />
 @@@END
 @@@FILE src/app/Footer.jsx
 @@@OLD

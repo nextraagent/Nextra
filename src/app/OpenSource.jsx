@@ -62,3 +62,34 @@ export default function OpenSource() {
     </section>
   );
 }
+
+// Compact version for the hero, sitting above the $NEXTRA chart card.
+export function OpenSourceBar() {
+  const [copied, setCopied] = useState(false);
+  const cmd = "git clone https://github.com/nextraagent/Nextra.git && cd Nextra && npm install";
+  const copy = () => {
+    navigator.clipboard?.writeText(cmd);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div className="osb">
+      <a className="osb-top" href={REPO} target="_blank" rel="noopener noreferrer">
+        <span className="osb-ico">
+          <GitHubMark size={18} />
+        </span>
+        <span className="osb-name">
+          <b>Open source</b>
+          <span>nextraagent/Nextra</span>
+        </span>
+        <span className="osb-go">View code ↗</span>
+      </a>
+      <button type="button" className="osb-cmd" onClick={copy} aria-label="Copy install command">
+        <code>
+          <b>$</b> git clone … &amp;&amp; npm install
+        </code>
+        <span>{copied ? "Copied" : "Copy"}</span>
+      </button>
+    </div>
+  );
+}
