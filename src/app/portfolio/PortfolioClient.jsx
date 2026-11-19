@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePrivy, useWallets, useSendTransaction } from "@privy-io/react-auth";
-import { createPublicClient, encodeFunctionData, formatEther, formatUnits, http, parseAbi, parseEther, parseUnits } from "viem";
+import { usePrivy, useWallets, useSigners } from "@privy-io/react-auth";
+import { encodeFunctionData, formatEther, formatUnits, parseAbi, parseEther, parseUnits } from "viem";
 import { robinhoodChain } from "../agents/Providers";
 import TokenLogo from "../TokenLogo";
 
@@ -10,24 +10,7 @@ const EXPLORER = "https://robinhoodchain.blockscout.com";
 const GAS_RESERVE = parseEther("0.0002");
 const erc20 = parseAbi(["function transfer(address to, uint256 amount) returns (bool)"]);
 const isAddr = (a) => /^0x[0-9a-fA-F]{40}$/.test((a || "").trim());
-// Gas is estimated here, straight from the Robinhood Chain RPC, so the wallet pop-up never waits on its own fee lookup.
-const rpc = createPublicClient({ chain: robinhoodChain, transport: http() });
-async function withGas(tx, from) {
-  const [gas, fees] = await Promise.all([
-    rpc.estimateGas({ account: from, to: tx.to, value: tx.value, data: tx.data }),
-    rpc.estimateFeesPerGas().catch(async () => {
-      const p = await rpc.getGasPrice();
-      return { maxFeePerGas: p * 2n, maxPriorityFeePerGas: 0n };
-    }),
-  ]);
-  return { ...tx, gasLimit: (gas * 13n) / 10n, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas ?? 0n };
-}
-const plainError = (m) =>
-  /insufficient funds|exceeds balance|gas required exceeds/i.test(m)
-    ? "Not enough ETH to pay the network fee. Keep a little ETH in this wallet."
-    : /reject|denied|cancel/i.test(m)
-      ? "Cancelled."
-      : m.slice(0, 160);
+const SIGNER_ID = process.env.NEXT_PUBLIC_PRIVY_SIGNER_ID || "";
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
 const fmt = (wei, max = 5) =>
   wei == null ? "–" : Number(formatEther(BigInt(wei))).toLocaleString("en-US", { maximumFractionDigits: max });
@@ -37,7 +20,10 @@ function Mono({ children }) {
 }
 
 function SendPanel({ assets, initial, onClose, onSent, from }) {
-  const { sendTransaction } = useSendTransaction();
+  // Sent server-side with the Nextra signer (same as the agents): Privy's own pop-up stalls on this chain's fee lookup.
+  const { user, getAccessToken } = usePrivy();
+  const { addSigners } = useSigners();
+  const delegated = !!(user?.linkedAccounts || []).find((x) => x.type === "wallet" && x.walletClientType === "privy" && x.delegated);
   const [asset, setAsset] = useState(initial || "ETH");
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
@@ -60,23 +46,20 @@ function SendPanel({ assets, initial, onClose, onSent, from }) {
     setBusy(true);
     setMsg("");
     try {
-      const target = to.trim();
-      const tx =
-        asset === "ETH"
-          ? { to: target, value: amountWei, chainId: robinhoodChain.id }
-          : {
-              to: a.address,
-              value: 0n,
-              chainId: robinhoodChain.id,
-              data: encodeFunctionData({ abi: erc20, functionName: "transfer", args: [target, amountWei] }),
-            };
-      const full = await withGas(tx, from);
-      // The Send panel is the confirmation step, so Privy's own pop-up is skipped.
-      const r = await sendTransaction(full, { address: from, uiOptions: { showWalletUIs: false } });
-      setHash(r?.hash || r?.transactionHash || "");
+      if (!delegated && SIGNER_ID) await addSigners({ address: from, signers: [{ signerId: SIGNER_ID, policyIds: [] }] });
+      const token = await getAccessToken();
+      const res = await fetch("/api/wallet/send", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ to: to.trim(), token: asset === "ETH" ? "ETH" : a.address, amount: amountWei.toString() }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.hash) throw new Error(d.error || "Send failed. Please try again.");
+      setHash(d.hash);
       onSent?.();
     } catch (e) {
-      setMsg(plainError(String(e?.shortMessage || e?.message || e)));
+      const m = String(e?.message || e);
+      setMsg(/reject|denied|cancel/i.test(m) ? "Cancelled." : m.slice(0, 160));
     } finally {
       setBusy(false);
     }
